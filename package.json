@@ -1,0 +1,13 @@
+{
+  "name": "versage-1-els",
+  "version": "1.0.0",
+  "description": "Versage 1 – ELS (English Through Reading) app for Vercel",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": "22.x"
+  }
+}
