@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ELS - English Through Reading</title>
@@ -911,8 +911,13 @@ head>
                 <h3>📖 Study the Text</h3>
                 <div class="reader-controls">
                     <div class="reader-control-group">
-                        <button class="btn btn-primary" onclick="startReadingAloud()">▶️ Read Aloud</button>
-                        <button class="btn btn-secondary" onclick="stopReadingAloud()">⏹ Stop</button>
+                        <button
+                            id="readAloudToggleBtn"
+                            class="btn btn-primary"
+                            onclick="toggleReadingAloud()"
+                        >
+                            🎧 Start read-aloud
+                        </button>
                         <div class="speed-control">
                             <span class="speed-label">Voice speed:</span>
                             <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeReadingSpeed(-0.1)">−</button>
@@ -921,15 +926,19 @@ head>
                         </div>
                     </div>
                     <div class="reader-control-group">
-                        <span>Skimming practice:</span>
+                        <button
+                            id="skimmingToggleBtn"
+                            class="btn btn-secondary"
+                            onclick="toggleSkimming()"
+                        >
+                            ⚡ Start skimming
+                        </button>
                         <div class="skimming-control">
-                            <span class="skimming-label">Speed:</span>
+                            <span class="skimming-label">Skimming speed:</span>
                             <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(-0.2)">−</button>
                             <span class="skimming-value" id="skimmingSpeedDisplay">1.0x</span>
                             <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(0.2)">+</button>
                         </div>
-                        <button class="btn btn-secondary" onclick="startSkimming()">▶️ Start</button>
-                        <button class="btn btn-secondary" onclick="stopSkimming()">⏹ Stop</button>
                     </div>
                     <div class="reader-control-group">
                         <button class="btn btn-secondary" onclick="changeFontSize(1)">A+</button>
@@ -1088,9 +1097,13 @@ head>
         let currentUtterance = null;
         let isReading = false;
 
-        // Skimming state
+        // Skimming state (words disappearing)
         let skimmingSpeed = 1.0;
         let skimmingInterval = null;
+        let isSkimming = false;
+        let originalText = '';
+        let originalWords = [];
+        let currentSkimIndex = 0;
 
         function loadVoices() {
             if (!('speechSynthesis' in window)) return;
@@ -1745,6 +1758,9 @@ head>
                     selector.disabled = true;
                 }
             }
+
+            updateReadingButton();
+            updateSkimmingButton();
         };
 
         // Load saved name and surname
@@ -1867,7 +1883,12 @@ head>
             document.getElementById('unitPage').classList.remove('hidden');
             document.getElementById('unitPageTitle').textContent = `Unit ${currentUnit.id}: ${currentUnit.title}`;
             const textEl = document.getElementById('textContent');
-            textEl.textContent = currentUnit.text;
+
+            originalText = currentUnit.text;
+            originalWords = originalText.split(/\s+/);
+            currentSkimIndex = 0;
+
+            textEl.textContent = originalText;
             textEl.scrollTop = 0;
             
             // Initialize cards
@@ -1879,6 +1900,9 @@ head>
 
             // Grammar section
             renderGrammarSection();
+
+            updateReadingButton();
+            updateSkimmingButton();
         }
 
         function renderGrammarSection() {
@@ -1913,6 +1937,14 @@ head>
         }
 
         // Reading aloud controls
+        function toggleReadingAloud() {
+            if (isReading) {
+                stopReadingAloud();
+            } else {
+                startReadingAloud();
+            }
+        }
+
         function startReadingAloud() {
             if (!('speechSynthesis' in window)) {
                 alert('Text-to-speech is not supported in your browser.');
@@ -1926,10 +1958,12 @@ head>
             const utterance = createUtterance(text, readingSpeed);
             currentUtterance = utterance;
             isReading = true;
+            updateReadingButton();
 
             utterance.onend = () => {
                 isReading = false;
                 currentUtterance = null;
+                updateReadingButton();
             };
 
             window.speechSynthesis.speak(utterance);
@@ -1940,6 +1974,7 @@ head>
             window.speechSynthesis.cancel();
             isReading = false;
             currentUtterance = null;
+            updateReadingButton();
         }
 
         function changeReadingSpeed(delta) {
@@ -1951,7 +1986,29 @@ head>
             }
         }
 
-        // Skimming controls
+        function updateReadingButton() {
+            const btn = document.getElementById('readAloudToggleBtn');
+            if (!btn) return;
+            if (isReading) {
+                btn.textContent = '⏹ Stop read-aloud';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.textContent = '🎧 Start read-aloud';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            }
+        }
+
+        // Skimming controls (words disappearing)
+        function toggleSkimming() {
+            if (isSkimming) {
+                stopSkimming();
+            } else {
+                startSkimming();
+            }
+        }
+
         function changeSkimmingSpeed(delta) {
             skimmingSpeed += delta;
             skimmingSpeed = Math.max(0.2, Math.min(12, skimmingSpeed));
@@ -1963,17 +2020,30 @@ head>
 
         function startSkimming() {
             const textEl = document.getElementById('textContent');
-            if (!textEl) return;
+            if (!textEl || !originalWords.length) return;
 
-            stopSkimming();
-            const baseStep = 1.8; // pixels
-            const intervalMs = 40;
+            stopSkimming(); // reset previous session
+
+            isSkimming = true;
+            currentSkimIndex = 0;
+            textEl.textContent = originalText;
+            updateSkimmingButton();
+
+            const baseWordsPerTick = 1.5; // base removal rate
+            const intervalMs = 80;
 
             skimmingInterval = setInterval(() => {
-                textEl.scrollTop += baseStep * skimmingSpeed;
-                if (textEl.scrollTop + textEl.clientHeight >= textEl.scrollHeight) {
+                const step = Math.max(1, Math.round(baseWordsPerTick * skimmingSpeed));
+                currentSkimIndex += step;
+
+                if (currentSkimIndex >= originalWords.length) {
+                    textEl.textContent = '';
                     stopSkimming();
+                    return;
                 }
+
+                const remaining = originalWords.slice(currentSkimIndex).join(' ');
+                textEl.textContent = remaining;
             }, intervalMs);
         }
 
@@ -1981,6 +2051,22 @@ head>
             if (skimmingInterval) {
                 clearInterval(skimmingInterval);
                 skimmingInterval = null;
+            }
+            isSkimming = false;
+            updateSkimmingButton();
+        }
+
+        function updateSkimmingButton() {
+            const btn = document.getElementById('skimmingToggleBtn');
+            if (!btn) return;
+            if (isSkimming) {
+                btn.textContent = '⏹ Stop skimming';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.textContent = '⚡ Start skimming';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
             }
         }
 
