@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ELS - English Through Reading</title>
@@ -110,12 +110,20 @@
 
         .voice-control {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            gap: 6px;
             background: var(--secondary-bg);
             padding: 6px 12px;
-            border-radius: 999px;
+            border-radius: 12px;
             border: 1px solid #e0e0e0;
+            max-width: 260px;
+        }
+
+        .voice-control-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
         }
 
         .voice-selector {
@@ -125,6 +133,13 @@
             font-weight: 500;
             color: var(--text-color);
             outline: none;
+            max-width: 180px;
+        }
+
+        .voice-tip {
+            font-size: 11px;
+            color: var(--text-color);
+            opacity: 0.75;
         }
 
         .btn {
@@ -151,6 +166,10 @@
             background: var(--card-bg);
             color: var(--text-color);
             border: 2px solid var(--accent-1);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-1px);
         }
 
         /* Welcome Page */
@@ -277,6 +296,7 @@
             cursor: pointer;
             transition: all 0.3s;
             border: 2px solid transparent;
+            position: relative;
         }
 
         .unit-card:hover {
@@ -290,15 +310,31 @@
             color: white;
         }
 
+        .unit-card.completed .unit-number {
+            color: white;
+        }
+
+        .unit-card.coming-soon {
+            opacity: 0.7;
+            cursor: default;
+        }
+
+        .coming-soon-label {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--warning);
+            color: #fff;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+        }
+
         .unit-number {
             font-size: 24px;
             font-weight: bold;
             color: var(--accent-1);
             margin-bottom: 10px;
-        }
-
-        .unit-card.completed .unit-number {
-            color: white;
         }
 
         .unit-title {
@@ -354,15 +390,49 @@
 
         .reader-controls {
             display: flex;
+            flex-direction: column;
             gap: 10px;
             margin-bottom: 20px;
+        }
+
+        .reader-control-group {
+            display: flex;
             flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .speed-control,
+        .skimming-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--secondary-bg);
+            border: 1px solid #ddd;
+            font-size: 13px;
+        }
+
+        .speed-label,
+        .skimming-label {
+            font-weight: 500;
+        }
+
+        .speed-value,
+        .skimming-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
         }
 
         .text-content {
             font-size: 18px;
             line-height: 1.8;
             user-select: text;
+            max-height: 380px;
+            overflow-y: auto;
+            padding-right: 8px;
         }
 
         .text-content::selection {
@@ -434,6 +504,24 @@
         .card-progress {
             text-align: center;
             margin-bottom: 20px;
+        }
+
+        /* Grammar section */
+        .grammar-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .grammar-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .grammar-example {
+            margin-top: 10px;
+            font-style: italic;
         }
 
         /* Exercise Styles */
@@ -710,6 +798,15 @@
             .countdown-number {
                 font-size: 80px;
             }
+
+            .reader-controls {
+                gap: 8px;
+            }
+
+            .reader-control-group {
+                flex-direction: row;
+                align-items: flex-start;
+            }
         }
 
         .test-size-selector {
@@ -745,16 +842,20 @@
     <!-- Global Header -->
     <header class="global-header hidden" id="globalHeader">
         <div class="channel-links">
-            <!-- Telegram links removed; just branding now -->
             <div class="channel-link">ELS – English Through Reading</div>
             <div class="channel-link">Versage 1</div>
         </div>
         <div class="header-controls">
             <div class="voice-control">
-                <span>🔊 Voice</span>
-                <select id="voiceSelector" class="voice-selector" onchange="changeVoice(this.value)">
-                    <option value="">Loading...</option>
-                </select>
+                <div class="voice-control-top">
+                    <span>🔊 Voice</span>
+                    <select id="voiceSelector" class="voice-selector" onchange="changeVoice(this.value)">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="voice-tip">
+                    Tip: if your browser provides a voice called “Juniper”, it will be selected automatically for clear, exam-style pronunciation.
+                </div>
             </div>
             <button class="btn btn-secondary" onclick="showProgress()">Progress</button>
             <button class="btn btn-secondary" onclick="cycleTheme()">🎨 Theme</button>
@@ -809,9 +910,31 @@
             <div class="text-reader-container">
                 <h3>📖 Study the Text</h3>
                 <div class="reader-controls">
-                    <button class="btn btn-primary" onclick="readText()">🔊 Read Text</button>
-                    <button class="btn btn-secondary" onclick="changeFontSize(1)">A+</button>
-                    <button class="btn btn-secondary" onclick="changeFontSize(-1)">A-</button>
+                    <div class="reader-control-group">
+                        <button class="btn btn-primary" onclick="startReadingAloud()">▶️ Read Aloud</button>
+                        <button class="btn btn-secondary" onclick="stopReadingAloud()">⏹ Stop</button>
+                        <div class="speed-control">
+                            <span class="speed-label">Voice speed:</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeReadingSpeed(-0.1)">−</button>
+                            <span class="speed-value" id="readingSpeedDisplay">1.0x</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeReadingSpeed(0.1)">+</button>
+                        </div>
+                    </div>
+                    <div class="reader-control-group">
+                        <span>Skimming practice:</span>
+                        <div class="skimming-control">
+                            <span class="skimming-label">Speed:</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(-0.2)">−</button>
+                            <span class="skimming-value" id="skimmingSpeedDisplay">1.0x</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(0.2)">+</button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="startSkimming()">▶️ Start</button>
+                        <button class="btn btn-secondary" onclick="stopSkimming()">⏹ Stop</button>
+                    </div>
+                    <div class="reader-control-group">
+                        <button class="btn btn-secondary" onclick="changeFontSize(1)">A+</button>
+                        <button class="btn btn-secondary" onclick="changeFontSize(-1)">A-</button>
+                    </div>
                 </div>
                 <div class="text-content" id="textContent"></div>
             </div>
@@ -844,6 +967,14 @@
                     <button class="btn btn-primary" onclick="startUnitExercises()" style="margin-right: 10px;">Go to Exercises</button>
                     <button class="btn btn-secondary" onclick="resetCards()">Study Words Again</button>
                 </div>
+
+                <!-- Grammar Focus -->
+                <div class="grammar-section hidden" id="grammarSection">
+                    <h3>📘 Grammar Focus</h3>
+                    <div class="grammar-title" id="grammarTitle"></div>
+                    <p id="grammarExplanation"></p>
+                    <p class="grammar-example" id="grammarExample"></p>
+                </div>
             </div>
 
             <!-- Exercises Section -->
@@ -854,6 +985,7 @@
                     <button class="btn btn-primary" onclick="startExercise('engToUz')">English → Uzbek</button>
                     <button class="btn btn-primary" onclick="startExercise('uzToEng')">Uzbek → English</button>
                     <button class="btn btn-primary" onclick="startExercise('gapfill')">Gap-Filling</button>
+                    <button class="btn btn-primary" id="grammarExerciseBtn" onclick="startGrammarExercise()">Grammar Practice</button>
                 </div>
             </div>
         </div>
@@ -922,19 +1054,19 @@
                 <h2>🎯 Grand Test</h2>
                 <p style="margin: 20px 0;">Select test size:</p>
                 <div class="test-size-selector">
-                    <div class="size-option" onclick="selectTestSize(30)">
+                    <div class="size-option" onclick="selectTestSize(30, event)">
                         <div style="font-size: 24px; font-weight: bold;">30</div>
                         <div>Mini</div>
                     </div>
-                    <div class="size-option" onclick="selectTestSize(50)">
+                    <div class="size-option" onclick="selectTestSize(50, event)">
                         <div style="font-size: 24px; font-weight: bold;">50</div>
                         <div>Medium</div>
                     </div>
-                    <div class="size-option" onclick="selectTestSize(70)">
+                    <div class="size-option" onclick="selectTestSize(70, event)">
                         <div style="font-size: 24px; font-weight: bold;">70</div>
                         <div>Large</div>
                     </div>
-                    <div class="size-option" onclick="selectTestSize(100)">
+                    <div class="size-option" onclick="selectTestSize(100, event)">
                         <div style="font-size: 24px; font-weight: bold;">100</div>
                         <div>Extra Large</div>
                     </div>
@@ -951,6 +1083,15 @@
         let exerciseSessionActive = false;
         let exerciseStatusSent = false;
 
+        // Reading aloud state
+        let readingSpeed = 1.0;
+        let currentUtterance = null;
+        let isReading = false;
+
+        // Skimming state
+        let skimmingSpeed = 1.0;
+        let skimmingInterval = null;
+
         function loadVoices() {
             if (!('speechSynthesis' in window)) return;
             const voices = window.speechSynthesis.getVoices();
@@ -959,6 +1100,24 @@
             const englishVoices = voices.filter(voice => voice.lang && voice.lang.startsWith('en'));
             availableVoices = (englishVoices.length ? englishVoices : voices).sort((a, b) => a.name.localeCompare(b.name));
 
+            // 1) Try to find "Juniper" first
+            let juniperVoice = availableVoices.find(v => /juniper/i.test(v.name));
+
+            // 2) Saved voice
+            const savedVoiceName = localStorage.getItem('elsPreferredVoice');
+            if (savedVoiceName) {
+                const savedVoice = availableVoices.find(v => v.name === savedVoiceName);
+                if (savedVoice) {
+                    selectedVoice = savedVoice;
+                }
+            }
+
+            // 3) Use Juniper if available and no saved preference
+            if (!selectedVoice && juniperVoice) {
+                selectedVoice = juniperVoice;
+            }
+
+            // 4) Prefer some nice default voices
             const preferredVoices = [
                 "Microsoft Aria Online (Natural) - English (United States)",
                 "Microsoft Jenny Online (Natural) - English (United States)",
@@ -967,14 +1126,6 @@
                 "Google UK English Female",
                 "Google UK English Male"
             ];
-
-            const savedVoiceName = localStorage.getItem('elsPreferredVoice');
-            if (savedVoiceName) {
-                const savedVoice = availableVoices.find(v => v.name === savedVoiceName);
-                if (savedVoice) {
-                    selectedVoice = savedVoice;
-                }
-            }
 
             if (!selectedVoice) {
                 for (let name of preferredVoices) {
@@ -1067,110 +1218,514 @@
         let selectedTestSize = 50;
         let isGrandTest = false;
 
-        // Sample Data - same as your file
+        // Units data with grammar + gapfill sentences
         const unitsData = [
             {
                 id: 1,
                 title: "The Best Recruiting Agents",
                 text: "In 1849 a servant girl wrote home to her brother from Port Adelaide, South Australia: “I have accepted a situation at £20 per annum, so you can tell the servants in your neighbourhood not to stay in England for such wages as from £4 to £8 a year, but come here.” Letters such as these, which were circulated from kitchen to kitchen and from attic to attic in English homes, were the best recruiting agents for the colonies, which were then so desperately in need of young women to serve the pioneers who were trying to create a new life for themselves in their chosen countries. Other girls read about the much better prospects overseas in newspapers and magazines, which also published advertisements giving details of free or assisted passages.",
                 words: [
-                    { word: "situation", definition: "job (in the passage, as a servant)", translation: "ish o‘rni (matnda xizmatkorlik ishi ma’nosida)" },
-                    { word: "per annum", definition: "for each year", translation: "har yil uchun" },
-                    { word: "wages", definition: "money paid for work, especially unskilled work", translation: "ish haqi (oddiy ishlarda)" },
-                    { word: "circulate", definition: "to move from place to place or person to person; to pass around", translation: "aylanmoq, qo‘ldan qo‘lga o‘tmoq" },
-                    { word: "attic", definition: "a room at the top of a house just below the roof", translation: "cherdak" },
-                    { word: "recruiting", definition: "the process of finding new workers", translation: "yollash, ishchilarni jalb qilish" },
-                    { word: "desperately", definition: "very greatly or seriously", translation: "juda jiddiy, keskin tarzda" },
-                    { word: "pioneer", definition: "one of the first people to move to a new country to work or settle", translation: "birinchi ko‘chib borgan odam, poydevor qo‘yuvchi" },
-                    { word: "prospects", definition: "chances of success, especially in work", translation: "muvaffaqiyat imkoniyatlari, istiqbollar (ishda)" },
-                    { word: "overseas", definition: "abroad; in a foreign country across the sea", translation: "dengiz ortidagi mamlakatlar, chet el" },
-                    { word: "free", definition: "without payment; costing nothing", translation: "bepul, tekin" },
-                    { word: "assisted", definition: "helped financially, especially for travel costs", translation: "moliyaviy yordam ko‘rsatilgan" },
-                    { word: "passage", definition: "a journey by ship from one place to another", translation: "dengiz orqali safar" }
-                ]
+                    { 
+                        word: "situation", 
+                        definition: "job (in the passage, as a servant)", 
+                        translation: "ish o‘rni (matnda xizmatkorlik ishi ma’nosida)",
+                        sentence: "She finally found a situation with kinder employers and better conditions."
+                    },
+                    { 
+                        word: "per annum", 
+                        definition: "for each year", 
+                        translation: "har yil uchun",
+                        sentence: "The contract offered a salary of twenty thousand dollars per annum."
+                    },
+                    { 
+                        word: "wages", 
+                        definition: "money paid for work, especially unskilled work", 
+                        translation: "ish haqi (oddiy ishlarda)",
+                        sentence: "Many workers complained that their wages were too low to cover basic living costs."
+                    },
+                    { 
+                        word: "circulate", 
+                        definition: "to move from place to place or person to person; to pass around", 
+                        translation: "aylanmoq, qo‘ldan qo‘lga o‘tmoq",
+                        sentence: "Rumours about the new law began to circulate in the small town."
+                    },
+                    { 
+                        word: "attic", 
+                        definition: "a room at the top of a house just below the roof", 
+                        translation: "cherdak",
+                        sentence: "They stored all the old furniture in the dusty attic."
+                    },
+                    { 
+                        word: "recruiting", 
+                        definition: "the process of finding new workers", 
+                        translation: "yollash, ishchilarni jalb qilish",
+                        sentence: "The company is currently recruiting new staff for its overseas branch."
+                    },
+                    { 
+                        word: "desperately", 
+                        definition: "very greatly or seriously", 
+                        translation: "juda jiddiy, keskin tarzda",
+                        sentence: "The town was desperately in need of fresh drinking water."
+                    },
+                    { 
+                        word: "pioneer", 
+                        definition: "one of the first people to move to a new country to work or settle", 
+                        translation: "birinchi ko‘chib borgan odam, poydevor qo‘yuvchi",
+                        sentence: "As a pioneer in this field, she developed techniques that others later copied."
+                    },
+                    { 
+                        word: "prospects", 
+                        definition: "chances of success, especially in work", 
+                        translation: "muvaffaqiyat imkoniyatlari, istiqbollar (ishda)",
+                        sentence: "He moved abroad because he believed his career prospects were better there."
+                    },
+                    { 
+                        word: "overseas", 
+                        definition: "abroad; in a foreign country across the sea", 
+                        translation: "dengiz ortidagi mamlakatlar, chet el",
+                        sentence: "Many students dream of studying overseas after they finish school."
+                    },
+                    { 
+                        word: "free", 
+                        definition: "without payment; costing nothing", 
+                        translation: "bepul, tekin",
+                        sentence: "In some cities, public museums are free for local residents."
+                    },
+                    { 
+                        word: "assisted", 
+                        definition: "helped financially, especially for travel costs", 
+                        translation: "moliyaviy yordam ko‘rsatilgan",
+                        sentence: "Many migrants travelled on assisted passages paid partly by the government."
+                    },
+                    { 
+                        word: "passage", 
+                        definition: "a journey by ship from one place to another", 
+                        translation: "dengiz orqali safar",
+                        sentence: "The family booked a passage to Australia on a large passenger ship."
+                    }
+                ],
+                grammar: {
+                    title: "Past Perfect vs Past Simple in Narratives",
+                    explanation: "Use the past perfect to talk about an earlier past action that happened before another past event. Use the past simple for the main sequence of events.",
+                    example: "She had written several letters before she finally accepted a situation in Australia.",
+                    questionText: "By the time she moved to Australia, she ___ several letters to her brother.",
+                    options: [
+                        "had written",
+                        "wrote",
+                        "has written",
+                        "was writing"
+                    ],
+                    correctIndex: 0
+                }
             },
             {
                 id: 2,
                 title: "Bringing Back Lost Memories",
                 text: "Our unconscious mind contains many millions of past experiences that appear to be lost forever. However, several psychological techniques can bring back forgotten memories. One method is free association, used by psychiatrists. When a patient allows their mind to wander at will, it may reveal clues to forgotten events which, if carefully explored, can uncover entire networks of hidden ideas and past fears. Certain drugs and hypnotism can also help access the unconscious mind.",
                 words: [
-                    { word: "forever", definition: "for all time", translation: "umrbod" },
-                    { word: "device", definition: "method for doing something or achieving a result", translation: "usul, metod" },
-                    { word: "wander", definition: "let your thoughts move without focus", translation: "daydib yurmoq" },
-                    { word: "at will", definition: "whenever and as much as you want", translation: "istagancha" },
-                    { word: "clue", definition: "information that helps solve a problem", translation: "kalit, jumboq yechimi" },
-                    { word: "pursue", definition: "try to learn more through questioning", translation: "kuzatmoq" },
-                    { word: "network", definition: "a connected system of many things", translation: "tizim" },
-                    { word: "terror", definition: "something that causes great fear", translation: "daxshat, qo‘rquv" },
-                    { word: "tremendous", definition: "very great or important", translation: "ulkan miqyosdagi" }
-                ]
+                    { 
+                        word: "forever", 
+                        definition: "for all time", 
+                        translation: "umrbod",
+                        sentence: "She believed that the embarrassing moment would stay in her mind forever."
+                    },
+                    { 
+                        word: "device", 
+                        definition: "method for doing something or achieving a result", 
+                        translation: "usul, metod",
+                        sentence: "Free association is a useful device for exploring a patient’s hidden thoughts."
+                    },
+                    { 
+                        word: "wander", 
+                        definition: "let your thoughts move without focus", 
+                        translation: "daydib yurmoq",
+                        sentence: "During the lesson, his mind began to wander and he stopped listening."
+                    },
+                    { 
+                        word: "at will", 
+                        definition: "whenever and as much as you want", 
+                        translation: "istagancha",
+                        sentence: "In free association, patients are encouraged to speak at will without planning."
+                    },
+                    { 
+                        word: "clue", 
+                        definition: "information that helps solve a problem", 
+                        translation: "kalit, jumboq yechimi",
+                        sentence: "The small detail in his dream gave the therapist an important clue."
+                    },
+                    { 
+                        word: "pursue", 
+                        definition: "try to learn more through questioning", 
+                        translation: "kuzatmoq",
+                        sentence: "The researcher decided to pursue this surprising result in more detail."
+                    },
+                    { 
+                        word: "network", 
+                        definition: "a connected system of many things", 
+                        translation: "tizim",
+                        sentence: "Memories can be linked together in a complex network of ideas."
+                    },
+                    { 
+                        word: "terror", 
+                        definition: "something that causes great fear", 
+                        translation: "dahshat, qo‘rquv",
+                        sentence: "As a child he experienced great terror during thunderstorms."
+                    },
+                    { 
+                        word: "tremendous", 
+                        definition: "very great or important", 
+                        translation: "ulkan miqyosdagi",
+                        sentence: "This discovery had a tremendous influence on modern psychology."
+                    }
+                ],
+                grammar: {
+                    title: "Using “Would” to Talk About Past Habits",
+                    explanation: "We use “would” to describe repeated actions in the past, especially in stories, when the time period is already clear.",
+                    example: "During therapy, he would talk for hours about his childhood memories.",
+                    questionText: "When he was a child, he ___ for hours about his strange dreams.",
+                    options: [
+                        "would talk",
+                        "is talking",
+                        "has talked",
+                        "talks"
+                    ],
+                    correctIndex: 0
+                }
             },
             {
                 id: 3,
                 title: "Palm Trees",
                 text: "Among the more than 2,500 species of palm trees worldwide, the Palmyra palm is second only to the coconut palm in importance. It provides food and over a hundred useful end-products. To obtain most of its benefits, the tree must be climbed twice daily to extract nutritious juice from its flower-bunches. This juice, converted through various methods, forms the basis of many products. However, collecting it is arduous and often dangerous, as the trees can reach heights of over 30 meters.",
                 words: [
-                    { word: "plus", definition: "more than", translation: "…dan ko‘p" },
-                    { word: "yield", definition: "produce naturally", translation: "hosil bermoq" },
-                    { word: "end-product", definition: "final product after processing", translation: "tayyor mahsulot" },
-                    { word: "obtain", definition: "to get", translation: "ega bo‘lmoq" },
-                    { word: "majority", definition: "more than half", translation: "asosiy, ko‘pchilik" },
-                    { word: "benefit", definition: "something useful or good", translation: "foyda" },
-                    { word: "extract", definition: "to take out from something", translation: "ajratib olmoq" },
-                    { word: "nutritious", definition: "having high food value", translation: "o‘zuqaviy, to‘yimli" },
-                    { word: "convert", definition: "to change in form", translation: "o‘zgartirmoq" },
-                    { word: "arduous", definition: "requiring a lot of effort", translation: "qiyin, mehnat talab" },
-                    { word: "top", definition: "to be higher than", translation: "…dan balandroq bo‘lmoq" }
-                ]
+                    { 
+                        word: "plus", 
+                        definition: "more than", 
+                        translation: "…dan ko‘p",
+                        sentence: "The tree can live for fifty years plus, if it is well looked after."
+                    },
+                    { 
+                        word: "yield", 
+                        definition: "produce naturally", 
+                        translation: "hosil bermoq",
+                        sentence: "These fields yield enough grain to feed the entire village."
+                    },
+                    { 
+                        word: "end-product", 
+                        definition: "final product after processing", 
+                        translation: "tayyor mahsulot",
+                        sentence: "Sugar is the main end-product of processing the sweet juice."
+                    },
+                    { 
+                        word: "obtain", 
+                        definition: "to get", 
+                        translation: "ega bo‘lmoq",
+                        sentence: "Workers must climb the palm to obtain the fresh juice every morning."
+                    },
+                    { 
+                        word: "majority", 
+                        definition: "more than half", 
+                        translation: "asosiy, ko‘pchilik",
+                        sentence: "The majority of villagers depend on the palm industry for income."
+                    },
+                    { 
+                        word: "benefit", 
+                        definition: "something useful or good", 
+                        translation: "foyda",
+                        sentence: "One major benefit of this tree is that every part can be used."
+                    },
+                    { 
+                        word: "extract", 
+                        definition: "to take out from something", 
+                        translation: "ajratib olmoq",
+                        sentence: "They extract the sap from the flower-bunches using simple tools."
+                    },
+                    { 
+                        word: "nutritious", 
+                        definition: "having high food value", 
+                        translation: "o‘zuqaviy, to‘yimli",
+                        sentence: "The juice is highly nutritious and is often given to children."
+                    },
+                    { 
+                        word: "convert", 
+                        definition: "to change in form", 
+                        translation: "o‘zgartirmoq",
+                        sentence: "Local factories convert the liquid into sugar and sweets."
+                    },
+                    { 
+                        word: "arduous", 
+                        definition: "requiring a lot of effort", 
+                        translation: "qiyin, mehnat talab",
+                        sentence: "Climbing tall trees every day is an arduous task."
+                    },
+                    { 
+                        word: "top", 
+                        definition: "to be higher than", 
+                        translation: "…dan balandroq bo‘lmoq",
+                        sentence: "Some palms top thirty metres and sway in the strong wind."
+                    }
+                ],
+                grammar: {
+                    title: "Passive Voice for Processes",
+                    explanation: "We often use the passive voice to describe processes when the action is more important than the person doing it.",
+                    example: "The juice is collected twice a day and then converted into sugar.",
+                    questionText: "In many villages, the juice ___ into several different products.",
+                    options: [
+                        "is converted",
+                        "converts",
+                        "was converting",
+                        "has converting"
+                    ],
+                    correctIndex: 0
+                }
             },
             {
                 id: 4,
                 title: "Overreacting to a Joke",
                 text: "People who laugh the longest and loudest at retold jokes often do not have a strong sense of humour. Though they may not admit it, they vaguely feel this weakness and sometimes go to extremes to hide it. A mediocre joke may get the same reaction from them as a genuinely funny one. Psychological research shows that people with a genuinely keen sense of humour do not laugh excessively. They appreciate humour deeply but remain discriminating and never overreact.",
                 words: [
-                    { word: "habitually", definition: "usually; according to someone's normal behaviour", translation: "odatdagidek" },
-                    { word: "retell", definition: "to repeat a story", translation: "qayta aytmoq" },
-                    { word: "possess", definition: "to have or own", translation: "egalik qilmoq" },
-                    { word: "particularly", definition: "especially; noticeably", translation: "ayniqsa, sezilarli" },
-                    { word: "keen", definition: "strong, sharp, highly aware", translation: "kuchli, sezgir" },
-                    { word: "sense of humour", definition: "ability to see when something is funny", translation: "kulgi hissi" },
-                    { word: "vaguely", definition: "not clearly", translation: "noaniq" },
-                    { word: "deficiency", definition: "lack of something", translation: "kamchilik" },
-                    { word: "frequently", definition: "often", translation: "tez-tez" },
-                    { word: "go to extremes", definition: "do more than acceptable", translation: "oshirib yubormoq" },
-                    { word: "mediocre", definition: "not very good", translation: "o‘rtacha" },
-                    { word: "likely", definition: "probable", translation: "ehtimol" },
-                    { word: "get a rise out of", definition: "cause a reaction", translation: "reaksiya chaqirmoq" },
-                    { word: "likewise", definition: "in a similar way", translation: "shuningdek" },
-                    { word: "be prone", definition: "likely to do something", translation: "moyil bo‘lmoq" },
-                    { word: "appreciative", definition: "showing enjoyment or understanding", translation: "qadrlovchi" },
-                    { word: "discriminating", definition: "able to judge quality well", translation: "farqlay oladigan" }
-                ]
+                    { 
+                        word: "habitually", 
+                        definition: "usually; according to someone's normal behaviour", 
+                        translation: "odatdagidek",
+                        sentence: "He habitually tells the same joke at every family gathering."
+                    },
+                    { 
+                        word: "retell", 
+                        definition: "to repeat a story", 
+                        translation: "qayta aytmoq",
+                        sentence: "She likes to retell funny stories she has heard at work."
+                    },
+                    { 
+                        word: "possess", 
+                        definition: "to have or own", 
+                        translation: "egalik qilmoq",
+                        sentence: "Not everyone possesses the ability to see subtle humour."
+                    },
+                    { 
+                        word: "particularly", 
+                        definition: "especially; noticeably", 
+                        translation: "ayniqsa, sezilarli",
+                        sentence: "He is particularly sensitive to jokes about his appearance."
+                    },
+                    { 
+                        word: "keen", 
+                        definition: "strong, sharp, highly aware", 
+                        translation: "kuchli, sezgir",
+                        sentence: "She has a keen sense of humour and rarely laughs at silly jokes."
+                    },
+                    { 
+                        word: "sense of humour", 
+                        definition: "ability to see when something is funny", 
+                        translation: "kulgi hissi",
+                        sentence: "His dry sense of humour is not understood by everyone."
+                    },
+                    { 
+                        word: "vaguely", 
+                        definition: "not clearly", 
+                        translation: "noaniq",
+                        sentence: "He vaguely remembered hearing that joke before."
+                    },
+                    { 
+                        word: "deficiency", 
+                        definition: "lack of something", 
+                        translation: "kamchilik",
+                        sentence: "They tried to hide their deficiency in social skills by laughing loudly."
+                    },
+                    { 
+                        word: "frequently", 
+                        definition: "often", 
+                        translation: "tez-tez",
+                        sentence: "The comedian frequently tests new material on small audiences."
+                    },
+                    { 
+                        word: "go to extremes", 
+                        definition: "do more than acceptable", 
+                        translation: "oshirib yubormoq",
+                        sentence: "Some people go to extremes to attract attention during a party."
+                    },
+                    { 
+                        word: "mediocre", 
+                        definition: "not very good", 
+                        translation: "o‘rtacha",
+                        sentence: "The film was mediocre, but the audience laughed as if it were brilliant."
+                    },
+                    { 
+                        word: "likely", 
+                        definition: "probable", 
+                        translation: "ehtimol",
+                        sentence: "It is likely that they will forget the joke by tomorrow."
+                    },
+                    { 
+                        word: "get a rise out of", 
+                        definition: "cause a reaction", 
+                        translation: "reaksiya chaqirmoq",
+                        sentence: "He told a rude story just to get a rise out of his friends."
+                    },
+                    { 
+                        word: "likewise", 
+                        definition: "in a similar way", 
+                        translation: "shuningdek",
+                        sentence: "She smiled, and he likewise tried to appear friendly."
+                    },
+                    { 
+                        word: "be prone", 
+                        definition: "likely to do something", 
+                        translation: "moyil bo‘lmoq",
+                        sentence: "People who are tired are more prone to overreact to small things."
+                    },
+                    { 
+                        word: "appreciative", 
+                        definition: "showing enjoyment or understanding", 
+                        translation: "qadrlovchi",
+                        sentence: "The audience was quiet but clearly appreciative of the clever humour."
+                    },
+                    { 
+                        word: "discriminating", 
+                        definition: "able to judge quality well", 
+                        translation: "farqlay oladigan",
+                        sentence: "Discriminating listeners do not laugh at every single joke."
+                    }
+                ],
+                grammar: {
+                    title: "Adverbs of Frequency and Degree",
+                    explanation: "We use adverbs like “frequently”, “often”, “rarely” and “slightly”, “deeply”, “extremely” to show how often or how strongly something happens.",
+                    example: "People with a keen sense of humour rarely laugh excessively.",
+                    questionText: "People who feel insecure are ___ likely to go to extremes to hide it.",
+                    options: [
+                        "more",
+                        "most",
+                        "much",
+                        "many"
+                    ],
+                    correctIndex: 0
+                }
             },
             {
                 id: 5,
                 title: "Alpine Forests",
                 text: "Alpine forests act as lifeguards for the snowy mountain peaks of the Alps. They naturally protect against avalanches and landslides. However, the expanding skiing industry, while beneficial for poor Alpine farmers, is harming the environment. Trees have been felled to make space for ski runs, car parks, and hotels. Meadows have been abandoned as farmers focus on tourism. As a result, avalanches have become more common. Experts estimate that two-thirds of the avalanches reaching inhabited areas each year are caused by forest depletion.",
                 words: [
-                    { word: "lifeguard", definition: "a person who protects others from danger in water", translation: "qutqaruvchi" },
-                    { word: "peak", definition: "top of a mountain", translation: "cho‘qqi" },
-                    { word: "barrier", definition: "something that blocks movement", translation: "to‘siq" },
-                    { word: "avalanche", definition: "mass of snow sliding down a mountain", translation: "qor ko‘chkisi" },
-                    { word: "landslide", definition: "movement of rocks and soil downward", translation: "yer ko‘chkisi" },
-                    { word: "boon", definition: "something helpful", translation: "naf, foyda" },
-                    { word: "fell", definition: "cut down trees", translation: "kesmoq" },
-                    { word: "meadow", definition: "grassland", translation: "maysazor" },
-                    { word: "abandon", definition: "leave behind", translation: "tashlab ketmoq" },
-                    { word: "keen", definition: "eager", translation: "mukkasidan ketmoq" },
-                    { word: "exploit", definition: "use for profit", translation: "foydalanmoq" },
-                    { word: "phenomenon", definition: "observable event", translation: "hodisa" },
-                    { word: "estimate", definition: "calculate roughly", translation: "chamalamoq" },
-                    { word: "descend", definition: "move downward", translation: "pastga tushmoq" },
-                    { word: "inhabited", definition: "with people living there", translation: "aholi yashaydigan" },
-                    { word: "depletion", definition: "reduction; running out", translation: "kamayish" }
-                ]
+                    { 
+                        word: "lifeguard", 
+                        definition: "a person who protects others from danger in water", 
+                        translation: "qutqaruvchi",
+                        sentence: "In this context, the forest acts like a lifeguard for the mountain slopes."
+                    },
+                    { 
+                        word: "peak", 
+                        definition: "top of a mountain", 
+                        translation: "cho‘qqi",
+                        sentence: "Fresh snow covered each peak after the storm."
+                    },
+                    { 
+                        word: "barrier", 
+                        definition: "something that blocks movement", 
+                        translation: "to‘siq",
+                        sentence: "Thick lines of trees form a natural barrier against avalanches."
+                    },
+                    { 
+                        word: "avalanche", 
+                        definition: "mass of snow sliding down a mountain", 
+                        translation: "qor ko‘chkisi",
+                        sentence: "The village was nearly destroyed by a sudden avalanche."
+                    },
+                    { 
+                        word: "landslide", 
+                        definition: "movement of rocks and soil downward", 
+                        translation: "yer ko‘chkisi",
+                        sentence: "Heavy rain triggered a landslide that blocked the road."
+                    },
+                    { 
+                        word: "boon", 
+                        definition: "something helpful", 
+                        translation: "naf, foyda",
+                        sentence: "Tourism can be a boon to small villages if it is managed carefully."
+                    },
+                    { 
+                        word: "fell", 
+                        definition: "cut down trees", 
+                        translation: "kesmoq",
+                        sentence: "Developers have already felled large areas of forest for ski resorts."
+                    },
+                    { 
+                        word: "meadow", 
+                        definition: "grassland", 
+                        translation: "maysazor",
+                        sentence: "In summer the meadow is full of wildflowers."
+                    },
+                    { 
+                        word: "abandon", 
+                        definition: "leave behind", 
+                        translation: "tashlab ketmoq",
+                        sentence: "Many farmers abandon their fields when tourism becomes more profitable."
+                    },
+                    { 
+                        word: "keen", 
+                        definition: "eager", 
+                        translation: "mukkasidan ketmoq",
+                        sentence: "Local businesses are keen to exploit every opportunity in the skiing industry."
+                    },
+                    { 
+                        word: "exploit", 
+                        definition: "use for profit", 
+                        translation: "foydalanmoq",
+                        sentence: "Some companies exploit natural resources without considering long-term damage."
+                    },
+                    { 
+                        word: "phenomenon", 
+                        definition: "observable event", 
+                        translation: "hodisa",
+                        sentence: "Global warming is a complex phenomenon with many causes."
+                    },
+                    { 
+                        word: "estimate", 
+                        definition: "calculate roughly", 
+                        translation: "chamalamoq",
+                        sentence: "Experts estimate that the number of avalanches has doubled."
+                    },
+                    { 
+                        word: "descend", 
+                        definition: "move downward", 
+                        translation: "pastga tushmoq",
+                        sentence: "Snow can suddenly descend from the peak, destroying everything below."
+                    },
+                    { 
+                        word: "inhabited", 
+                        definition: "with people living there", 
+                        translation: "aholi yashaydigan",
+                        sentence: "Only a few inhabited villages remain in the high valleys."
+                    },
+                    { 
+                        word: "depletion", 
+                        definition: "reduction; running out", 
+                        translation: "kamayish",
+                        sentence: "Forest depletion has made the slopes less stable and more dangerous."
+                    }
+                ],
+                grammar: {
+                    title: "Cause and Effect with “as a result” and “due to”",
+                    explanation: "We use phrases like “as a result” and “due to” to clearly show cause and effect in academic-style writing.",
+                    example: "Trees have been felled for ski runs; as a result, avalanches have become more common.",
+                    questionText: "Many meadows have been abandoned; ___, traditional farming has almost disappeared.",
+                    options: [
+                        "as a result",
+                        "in spite of",
+                        "even though",
+                        "otherwise"
+                    ],
+                    correctIndex: 0
+                }
             }
         ];
+
+        // Add placeholder units 6–75 (Coming soon)
+        for (let i = 6; i <= 75; i++) {
+            unitsData.push({
+                id: i,
+                title: `Unit ${i} – Coming Soon`,
+                comingSoon: true
+            });
+        }
 
         // Initialize
         window.onload = function() {
@@ -1178,6 +1733,9 @@
             setInterval(updateDateTime, 1000);
             loadSavedData();
             renderUnits();
+            document.getElementById('readingSpeedDisplay').textContent = readingSpeed.toFixed(1) + 'x';
+            document.getElementById('skimmingSpeedDisplay').textContent = skimmingSpeed.toFixed(1) + 'x';
+
             if ('speechSynthesis' in window) {
                 loadVoices();
             } else {
@@ -1247,12 +1805,19 @@
             grid.innerHTML = '';
             
             unitsData.forEach(unit => {
-                const completed = isUnitCompleted(unit.id);
-                const progress = getUnitProgress(unit.id);
+                const completed = !unit.comingSoon && isUnitCompleted(unit.id);
+                const progress = unit.comingSoon ? 0 : getUnitProgress(unit.id);
                 
                 const card = document.createElement('div');
-                card.className = `unit-card ${completed ? 'completed' : ''}`;
-                card.onclick = () => openUnit(unit.id);
+                card.className = `unit-card ${completed ? 'completed' : ''} ${unit.comingSoon ? 'coming-soon' : ''}`;
+                
+                card.onclick = () => {
+                    if (unit.comingSoon) {
+                        showModal("<h3>⏳ Coming Soon</h3><p>This unit will be added later.</p>");
+                    } else {
+                        openUnit(unit.id);
+                    }
+                };
                 
                 card.innerHTML = `
                     <div class="unit-number">Unit ${unit.id}</div>
@@ -1260,6 +1825,7 @@
                     <div class="progress-bar">
                         <div class="progress-fill" style="width: ${progress}%"></div>
                     </div>
+                    ${unit.comingSoon ? '<div class="coming-soon-label">Coming soon</div>' : ''}
                 `;
                 
                 grid.appendChild(card);
@@ -1292,12 +1858,17 @@
         // Open unit
         function openUnit(unitId) {
             currentUnit = unitsData.find(u => u.id === unitId);
-            if (!currentUnit) return;
+            if (!currentUnit || currentUnit.comingSoon) return;
+
+            stopSkimming();
+            stopReadingAloud();
 
             document.getElementById('mainPage').classList.add('hidden');
             document.getElementById('unitPage').classList.remove('hidden');
             document.getElementById('unitPageTitle').textContent = `Unit ${currentUnit.id}: ${currentUnit.title}`;
-            document.getElementById('textContent').textContent = currentUnit.text;
+            const textEl = document.getElementById('textContent');
+            textEl.textContent = currentUnit.text;
+            textEl.scrollTop = 0;
             
             // Initialize cards
             cardShuffled = [...currentUnit.words].sort(() => Math.random() - 0.5);
@@ -1305,11 +1876,34 @@
             showCard();
             
             document.getElementById('cardsCompleteButtons').classList.add('hidden');
+
+            // Grammar section
+            renderGrammarSection();
+        }
+
+        function renderGrammarSection() {
+            const section = document.getElementById('grammarSection');
+            const btn = document.getElementById('grammarExerciseBtn');
+            if (!currentUnit || !currentUnit.grammar) {
+                if (section) section.classList.add('hidden');
+                if (btn) btn.disabled = true;
+                return;
+            }
+
+            if (section) {
+                section.classList.remove('hidden');
+                document.getElementById('grammarTitle').textContent = currentUnit.grammar.title;
+                document.getElementById('grammarExplanation').textContent = currentUnit.grammar.explanation;
+                document.getElementById('grammarExample').textContent = "Example: " + currentUnit.grammar.example;
+            }
+            if (btn) btn.disabled = false;
         }
 
         // Show main page
         function showMainPage() {
             sendIncompleteIfNeeded('Returned to main page');
+            stopSkimming();
+            stopReadingAloud();
             document.getElementById('unitPage').classList.add('hidden');
             document.getElementById('exercisePage').classList.add('hidden');
             document.getElementById('resultsPage').classList.add('hidden');
@@ -1318,17 +1912,76 @@
             renderUnits();
         }
 
-        // Read text
-        function readText() {
+        // Reading aloud controls
+        function startReadingAloud() {
             if (!('speechSynthesis' in window)) {
-                alert('Text-to-speech not supported in your browser');
+                alert('Text-to-speech is not supported in your browser.');
                 return;
             }
             if (!currentUnit) return;
+
+            stopReadingAloud(); // cancel any previous
+
             const text = `${currentUnit.title}. ${currentUnit.text}`;
-            const utterance = createUtterance(text, 0.9);
-            window.speechSynthesis.cancel();
+            const utterance = createUtterance(text, readingSpeed);
+            currentUtterance = utterance;
+            isReading = true;
+
+            utterance.onend = () => {
+                isReading = false;
+                currentUtterance = null;
+            };
+
             window.speechSynthesis.speak(utterance);
+        }
+
+        function stopReadingAloud() {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            isReading = false;
+            currentUtterance = null;
+        }
+
+        function changeReadingSpeed(delta) {
+            readingSpeed += delta;
+            readingSpeed = Math.max(0.2, Math.min(2.0, readingSpeed));
+            const display = document.getElementById('readingSpeedDisplay');
+            if (display) {
+                display.textContent = readingSpeed.toFixed(1) + 'x';
+            }
+        }
+
+        // Skimming controls
+        function changeSkimmingSpeed(delta) {
+            skimmingSpeed += delta;
+            skimmingSpeed = Math.max(0.2, Math.min(12, skimmingSpeed));
+            const display = document.getElementById('skimmingSpeedDisplay');
+            if (display) {
+                display.textContent = skimmingSpeed.toFixed(1) + 'x';
+            }
+        }
+
+        function startSkimming() {
+            const textEl = document.getElementById('textContent');
+            if (!textEl) return;
+
+            stopSkimming();
+            const baseStep = 1.8; // pixels
+            const intervalMs = 40;
+
+            skimmingInterval = setInterval(() => {
+                textEl.scrollTop += baseStep * skimmingSpeed;
+                if (textEl.scrollTop + textEl.clientHeight >= textEl.scrollHeight) {
+                    stopSkimming();
+                }
+            }, intervalMs);
+        }
+
+        function stopSkimming() {
+            if (skimmingInterval) {
+                clearInterval(skimmingInterval);
+                skimmingInterval = null;
+            }
         }
 
         // Change font size
@@ -1340,6 +1993,15 @@
 
         // Show card
         function showCard() {
+            if (!cardShuffled || !cardShuffled.length) {
+                document.getElementById('cardWord').textContent = "No words";
+                document.getElementById('cardDefinition').textContent = "";
+                document.getElementById('cardTranslation').textContent = "";
+                document.getElementById('cardProgress').textContent = "";
+                document.getElementById('cardsCompleteButtons').classList.add('hidden');
+                return;
+            }
+
             if (currentCardIndex >= cardShuffled.length) {
                 document.getElementById('cardsCompleteButtons').classList.remove('hidden');
                 createFireworks();
@@ -1361,6 +2023,7 @@
 
         // Next card
         function nextCard() {
+            if (!cardShuffled.length) return;
             currentCardIndex++;
             showCard();
         }
@@ -1375,6 +2038,7 @@
 
         // Reset cards
         function resetCards() {
+            if (!currentUnit || !currentUnit.words) return;
             cardShuffled = [...currentUnit.words].sort(() => Math.random() - 0.5);
             currentCardIndex = 0;
             showCard();
@@ -1410,8 +2074,12 @@
             document.getElementById('unitPage').classList.remove('hidden');
         }
 
-        // Start exercise
+        // Start vocabulary exercise
         function startExercise(type) {
+            if (!currentUnit || !currentUnit.words || !currentUnit.words.length) {
+                alert('This unit has no active vocabulary yet.');
+                return;
+            }
             currentExerciseType = type;
             isGrandTest = false;
             const count = currentUnit.words.length;
@@ -1423,7 +2091,23 @@
             });
         }
 
-        // Generate exercise questions
+        // Start grammar exercise (one MCQ)
+        function startGrammarExercise() {
+            if (!currentUnit || !currentUnit.grammar) {
+                alert('Grammar practice for this unit is coming soon.');
+                return;
+            }
+            currentExerciseType = 'grammar';
+            isGrandTest = false;
+            generateGrammarQuestion(currentUnit.grammar);
+            showCountdown(() => {
+                document.getElementById('unitPage').classList.add('hidden');
+                document.getElementById('exercisePage').classList.remove('hidden');
+                startExerciseTest();
+            });
+        }
+
+        // Generate vocab exercise questions
         function generateExerciseQuestions(words, type, count) {
             exerciseQuestions = [];
             exerciseScore = { correct: 0, wrong: 0 };
@@ -1462,9 +2146,11 @@
                         };
                         break;
                     case 'gapfill':
-                        const sentence = `The concept of ${correctWord.word} is important in modern society.`;
+                        const baseSentence = correctWord.sentence || `The concept of ${correctWord.word} is important in modern society.`;
+                        const gapRegex = new RegExp(correctWord.word, 'i');
+                        const gapSentence = baseSentence.replace(gapRegex, '______');
                         question = {
-                            text: sentence.replace(correctWord.word, '______'),
+                            text: gapSentence,
                             options: optionsCandidates.map(w => w.word),
                             correct: correctWord.word,
                             type: 'Gap-Filling'
@@ -1475,6 +2161,19 @@
             });
 
             exerciseQuestions.sort(() => Math.random() - 0.5);
+        }
+
+        // Grammar question generator
+        function generateGrammarQuestion(grammar) {
+            exerciseQuestions = [];
+            exerciseScore = { correct: 0, wrong: 0 };
+
+            exerciseQuestions.push({
+                text: grammar.questionText,
+                options: grammar.options,
+                correct: grammar.options[grammar.correctIndex],
+                type: 'Grammar Practice'
+            });
         }
 
         // Start exercise test
@@ -1662,7 +2361,7 @@
                 localStorage.setItem(`unit_${currentUnit.id}_progress`, '100');
             }
             
-            // Send to server (which may forward to Telegram via env vars)
+            // Send to server
             sendResultToServer(percentage, total, 'Completed');
         }
 
@@ -1672,8 +2371,12 @@
                 document.getElementById('resultsPage').classList.add('hidden');
                 document.getElementById('grandTestSetup').classList.remove('hidden');
             } else {
-                const count = currentUnit.words.length;
-                generateExerciseQuestions(currentUnit.words, currentExerciseType, count);
+                if (currentExerciseType === 'grammar') {
+                    generateGrammarQuestion(currentUnit.grammar);
+                } else {
+                    const count = currentUnit.words.length;
+                    generateExerciseQuestions(currentUnit.words, currentExerciseType, count);
+                }
                 showCountdown(() => {
                     document.getElementById('resultsPage').classList.add('hidden');
                     document.getElementById('exercisePage').classList.remove('hidden');
@@ -1758,10 +2461,10 @@
             document.getElementById('grandTestSetup').classList.remove('hidden');
         }
 
-        function selectTestSize(size) {
+        function selectTestSize(size, event) {
             selectedTestSize = size;
             document.querySelectorAll('.size-option').forEach(el => el.classList.remove('selected'));
-            event.target.closest('.size-option').classList.add('selected');
+            event.currentTarget.classList.add('selected');
         }
 
         function beginGrandTest() {
@@ -1769,20 +2472,26 @@
             
             const allWords = [];
             unitsData.forEach(unit => {
-                allWords.push(...unit.words);
+                if (!unit.comingSoon && unit.words) {
+                    allWords.push(...unit.words);
+                }
             });
             
-            const questionsPerType = Math.floor(selectedTestSize / 4);
+            if (!allWords.length) {
+                alert('No vocabulary is available for the grand test yet.');
+                return;
+            }
+
+            const totalQuestions = Math.min(selectedTestSize, allWords.length * 4);
+            const perType = Math.floor(totalQuestions / 4);
             exerciseQuestions = [];
             exerciseScore = { correct: 0, wrong: 0 };
             
             const types = ['definition', 'engToUz', 'uzToEng', 'gapfill'];
 
-            // NOTE: This keeps your original logic; if you want a perfectly balanced
-            // grand test later, we can adjust how questions are merged here.
             types.forEach(type => {
-                const shuffled = [...allWords].sort(() => Math.random() - 0.5).slice(0, questionsPerType);
-                generateExerciseQuestions(shuffled, type, questionsPerType);
+                const shuffled = [...allWords].sort(() => Math.random() - 0.5).slice(0, perType);
+                generateExerciseQuestions(shuffled, type, perType);
             });
             
             showCountdown(() => {
@@ -1792,9 +2501,24 @@
             });
         }
 
-        // Send result to backend API (no token/chat id in frontend)
+        // Send result to backend API
         async function sendResultToServer(percentage, total, status, extraDetails = '') {
-            const testName = isGrandTest ? `Grand Test (${selectedTestSize} questions)` : currentUnit ? `Unit ${currentUnit.id} Test` : 'Unit Test';
+            const readableType = (t) => {
+                switch (t) {
+                    case 'definition': return 'Matching Definition';
+                    case 'engToUz': return 'English → Uzbek';
+                    case 'uzToEng': return 'Uzbek → English';
+                    case 'gapfill': return 'Gap-Filling';
+                    case 'grammar': return 'Grammar Practice';
+                    default: return 'Mixed';
+                }
+            };
+
+            const testName = isGrandTest
+                ? `Grand Test (${selectedTestSize} questions)`
+                : currentUnit
+                    ? `Unit ${currentUnit.id} – ${readableType(currentExerciseType)}`
+                    : 'Unit Test';
 
             const payload = {
                 appName: 'ELS',
@@ -1844,6 +2568,16 @@
             let html = '<h3>📊 Your Progress</h3><div style="margin-top: 20px;">';
             
             unitsData.forEach(unit => {
+                if (unit.comingSoon) {
+                    html += `
+                        <div style="padding: 15px; margin-bottom: 10px; background: var(--secondary-bg); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span><strong>Unit ${unit.id}:</strong> ${unit.title}</span>
+                            <span style="color: var(--warning);">Coming soon</span>
+                        </div>
+                    `;
+                    return;
+                }
+
                 const completed = isUnitCompleted(unit.id);
                 const progress = getUnitProgress(unit.id);
                 let status = 'Not started';
