@@ -1,1 +1,2747 @@
+<!--
+This HTML file defines the user interface and behaviour for the “English Through Reading”
+application.  It exposes a revised skimming practice mode: when skimming is activated, the text
+remains static on the page and each word fades away one by one at a slower, adjustable pace.
+Previously, the skimming feature would re‑render the text without the skipped words, causing the
+entire block to shift upward.  This new implementation wraps every word in a span element and
+hides them sequentially based on the selected speed.  The interval between removals is now much
+longer – by default one second per word – and scales inversely with the skimming speed (higher
+speeds mean faster disappearance).  Users can adjust the speed in 0.2 increments; the minimum is
+0.2x and the maximum is 12x.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELS - English Through Reading</title>
+    <style>
+        /* Original styles omitted for brevity; they remain unchanged */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        :root {
+            --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-bg: #ffffff;
+            --text-color: #333333;
+            --card-bg: #ffffff;
+            --header-bg: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --accent-1: #667eea;
+            --accent-2: #f093fb;
+            --accent-3: #4facfe;
+            --accent-4: #43e97b;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        /* Additional CSS used by the revised skimming mode.  Each word is wrapped
+           in a span with the class "skimming-word".  These spans are inline-block
+           so they preserve spacing and line breaks, and their visibility can be
+           toggled without altering the layout of the surrounding text. */
+        .skimming-word {
+            display: inline-block;
+            /* Ensure minimal width so that the space after the word is preserved. */
+            margin-right: 4px;
+        }
+
+        [data-theme="soft-blue"] {
+            --primary-bg: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --accent-1: #4facfe;
+            --accent-2: #00f2fe;
+            --accent-3: #43e97b;
+            --accent-4: #f093fb;
+        }
+
+        [data-theme="dark"] {
+            --primary-bg: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --secondary-bg: #1a1a1a;
+            --text-color: #e0e0e0;
+            --card-bg: #2d2d2d;
+            --header-bg: #1a1a1a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Header Styles */
+        .global-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--header-bg);
+            box-shadow: var(--shadow);
+            padding: 15px 20px;
+            z-index: 1000;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .channel-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        .channel-link {
+            padding: 8px 15px;
+            border-radius: 20px;
+            text-decoration: none;
+            color: white;
+            font-size: 14px;
+            transition: transform 0.2s;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .channel-link:hover {
+            transform: translateY(-2px);
+        }
+
+        .channel-link:nth-child(1) { background: var(--accent-1); }
+        .channel-link:nth-child(2) { background: var(--accent-2); }
+        .channel-link:nth-child(3) { background: var(--accent-3); }
+        .channel-link:nth-child(4) { background: var(--accent-4); }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .voice-control {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: var(--secondary-bg);
+            padding: 6px 12px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            max-width: 260px;
+        }
+
+        .voice-control-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .voice-selector {
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-color);
+            outline: none;
+            max-width: 180px;
+        }
+
+        .voice-tip {
+            font-size: 11px;
+            color: var(--text-color);
+            opacity: 0.75;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: var(--accent-1);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 2px solid var(--accent-1);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Welcome Page */
+        .welcome-page {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 80px);
+            padding: 20px;
+        }
+
+        .welcome-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .book-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .welcome-card h1 {
+            color: var(--accent-1);
+            margin-bottom: 20px;
+        }
+
+        .welcome-message {
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-1);
+        }
+
+        .datetime-display {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        /* Main Page */
+        .main-container {
+            width: 90%;
+            max-width: 1400px;
+            margin: 20px auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .grand-test-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 30px;
+            transition: transform 0.3s;
+        }
+
+        .grand-test-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .units-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .unit-card {
+            background: var(--secondary-bg);
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+        }
+
+        .unit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            border-color: var(--accent-1);
+        }
+
+        .unit-card.completed {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .unit-card.completed .unit-number {
+            color: white;
+        }
+
+        .unit-card.coming-soon {
+            opacity: 0.7;
+            cursor: default;
+        }
+
+        .coming-soon-label {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--warning);
+            color: #fff;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+        }
+
+        .unit-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-1);
+            margin-bottom: 10px;
+        }
+
+        .unit-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-1);
+            transition: width 0.3s;
+        }
+
+        /* Unit Page */
+        .unit-page {
+            padding: 20px;
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--accent-1);
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            width: fit-content;
+            color: var(--text-color);
+        }
+
+        .back-button:hover {
+            background: var(--accent-1);
+            color: white;
+        }
+
+        .text-reader-container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+
+        .reader-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .reader-control-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .speed-control,
+        .skimming-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--secondary-bg);
+            border: 1px solid #ddd;
+            font-size: 13px;
+        }
+
+        .speed-label,
+        .skimming-label {
+            font-weight: 500;
+        }
+
+        .speed-value,
+        .skimming-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .text-content {
+            font-size: 18px;
+            line-height: 1.8;
+            user-select: text;
+            max-height: 380px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .text-content::selection {
+            background: var(--accent-2);
+            color: white;
+        }
+
+        /* Flip Cards */
+        .flip-cards-container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        .flip-card-wrapper {
+            perspective: 1000px;
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+            margin: 0 auto 30px;
+        }
+
+        .flip-card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+
+        .flip-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flip-card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .flip-card-front {
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+            color: white;
+        }
+
+        .flip-card-back {
+            background: linear-gradient(135deg, var(--accent-3), var(--accent-4));
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        .word-text {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .card-progress {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Grammar section */
+        .grammar-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .grammar-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .grammar-example {
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        /* Exercise Styles */
+        .exercise-container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .progress-panel {
+            background: var(--secondary-bg);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-1);
+        }
+
+        .timer.warning {
+            color: var(--error);
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .question-block {
+            margin-bottom: 30px;
+        }
+
+        .question-text {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .options-container {
+            display: grid;
+            gap: 15px;
+        }
+
+        .option-btn {
+            padding: 20px;
+            background: var(--secondary-bg);
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            font-size: 18px;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .option-btn:hover {
+            border-color: var(--accent-1);
+            transform: translateX(5px);
+        }
+
+        .option-btn.correct {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .option-btn.incorrect {
+            background: var(--error);
+            color: white;
+            border-color: var(--error);
+        }
+
+        .answer-feedback {
+            margin-top: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .question-navigation {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .question-navigation .btn {
+            min-width: 200px;
+        }
+
+        /* Countdown Overlay */
+        .countdown-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .countdown-number {
+            font-size: 120px;
+            font-weight: bold;
+            color: white;
+            animation: countdownAnim 1s ease-out;
+        }
+
+        @keyframes countdownAnim {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Results Page */
+        .results-container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .score-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--accent-1);
+            margin: 30px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-item {
+            padding: 20px;
+            background: var(--secondary-bg);
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--accent-1);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        /* Fireworks */
+        .fireworks {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 1500;
+        }
+
+        .firework {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            animation: fireworkAnim 1s ease-out forwards;
+        }
+
+        @keyframes fireworkAnim {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty));
+                opacity: 0;
+            }
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .global-header {
+                padding: 10px;
+            }
+
+            .channel-links {
+                width: 100%;
+            }
+
+            .channel-link {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+
+            .main-container {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .units-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .welcome-card {
+                padding: 30px 20px;
+            }
+
+            .countdown-number {
+                font-size: 80px;
+            }
+
+            .reader-controls {
+                gap: 8px;
+            }
+
+            .reader-control-group {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+        }
+
+        .test-size-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .size-option {
+            padding: 20px;
+            background: var(--secondary-bg);
+            border: 2px solid var(--accent-1);
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .size-option:hover {
+            background: var(--accent-1);
+            color: white;
+            transform: translateY(-5px);
+        }
+
+        .size-option.selected {
+            background: var(--accent-1);
+            color: white;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <!-- Global Header -->
+    <header class="global-header hidden" id="globalHeader">
+        <div class="channel-links">
+            <div class="channel-link">ELS – English Through Reading</div>
+            <div class="channel-link">Versage 1</div>
+        </div>
+        <div class="header-controls">
+            <div class="voice-control">
+                <div class="voice-control-top">
+                    <span>🔊 Voice</span>
+                    <select id="voiceSelector" class="voice-selector" onchange="changeVoice(this.value)">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="voice-tip">
+                    Tip: if your browser provides a voice called “Juniper”, it will be selected automatically for clear, exam-style pronunciation.
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="showProgress()">Progress</button>
+            <button class="btn btn-secondary" onclick="cycleTheme()">🎨 Theme</button>
+        </div>
+    </header>
+
+    <!-- Welcome Page -->
+    <div id="welcomePage" class="welcome-page">
+        <div class="welcome-card">
+            <div class="book-icon">📚</div>
+            <h1>Welcome to ELS</h1>
+            <p class="welcome-message">
+                English Through Reading is designed to help you improve your vocabulary and reading comprehension. 
+                Study texts, learn new words through interactive flashcards, and test your knowledge with various exercises.
+            </p>
+            <form id="welcomeForm" onsubmit="enterApp(event)">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="nameInput" required>
+                </div>
+                <div class="form-group">
+                    <label>Surname</label>
+                    <input type="text" id="surnameInput" required>
+                </div>
+                <div class="form-group">
+                    <label>Group Name</label>
+                    <input type="text" id="groupInput" required>
+                </div>
+                <div class="datetime-display" id="datetimeDisplay"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Enter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Page -->
+    <div id="mainPage" class="hidden">
+        <div class="main-container">
+            <h1 style="margin-bottom: 20px; color: var(--accent-1);">ELS - English Through Reading</h1>
+            <button class="grand-test-btn" onclick="startGrandTest()">🎯 Grand Test (All Units)</button>
+            <input type="text" class="search-bar" id="searchBar" placeholder="🔍 Search units by title..." oninput="filterUnits()">
+            <div class="units-grid" id="unitsGrid"></div>
+        </div>
+    </div>
+
+    <!-- Unit Page -->
+    <div id="unitPage" class="hidden unit-page">
+        <div class="main-container">
+            <button class="back-button" onclick="showMainPage()">← Back to Main</button>
+            <h2 id="unitPageTitle"></h2>
+            
+            <!-- Text Reader Section -->
+            <div class="text-reader-container">
+                <h3>📖 Study the Text</h3>
+                <div class="reader-controls">
+                    <div class="reader-control-group">
+                        <button
+                            id="readAloudToggleBtn"
+                            class="btn btn-primary"
+                            onclick="toggleReadingAloud()"
+                        >
+                            🎧 Start read-aloud
+                        </button>
+                        <div class="speed-control">
+                            <span class="speed-label">Voice speed:</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeReadingSpeed(-0.1)">−</button>
+                            <span class="speed-value" id="readingSpeedDisplay">1.0x</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeReadingSpeed(0.1)">+</button>
+                        </div>
+                    </div>
+                    <div class="reader-control-group">
+                        <button
+                            id="skimmingToggleBtn"
+                            class="btn btn-secondary"
+                            onclick="toggleSkimming()"
+                        >
+                            ⚡ Start skimming
+                        </button>
+                        <div class="skimming-control">
+                            <span class="skimming-label">Skimming speed:</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(-0.2)">−</button>
+                            <span class="skimming-value" id="skimmingSpeedDisplay">1.0x</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(0.2)">+</button>
+                        </div>
+                    </div>
+                    <div class="reader-control-group">
+                        <button class="btn btn-secondary" onclick="changeFontSize(1)">A+</button>
+                        <button class="btn btn-secondary" onclick="changeFontSize(-1)">A-</button>
+                    </div>
+                </div>
+                <div class="text-content" id="textContent"></div>
+            </div>
+
+            <!-- Flip Cards Section -->
+            <div class="flip-cards-container" id="flipCardsSection">
+                <h3>📇 Study Words</h3>
+                <div class="card-progress" id="cardProgress"></div>
+                <div class="flip-card-wrapper">
+                    <div class="flip-card" id="flipCard" onclick="flipCard()">
+                        <div class="flip-card-face flip-card-front">
+                            <div class="word-text" id="cardWord"></div>
+                            <button class="btn btn-primary" onclick="speakWord(event)">🔊 Pronounce</button>
+                        </div>
+                        <div class="flip-card-face flip-card-back">
+                            <h4 style="margin-bottom: 15px;">Definition:</h4>
+                            <p id="cardDefinition" style="margin-bottom: 20px; font-size: 18px;"></p>
+                            <h4 style="margin-bottom: 15px;">Translation:</h4>
+                            <p id="cardTranslation" style="font-size: 18px;"></p>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="nextCard()" style="margin-right: 10px;">Next Card</button>
+                    <button class="btn btn-secondary" onclick="previousCard()">Previous Card</button>
+                </div>
+                <div style="text-align: center; margin-top: 20px;" id="cardsCompleteButtons" class="hidden">
+                    <h3 style="margin-bottom: 20px; color: var(--success);">🎉 Great job! You've studied all words!</h3>
+                    <p style="font-style: italic; margin-bottom: 20px;">"Success is the sum of small efforts repeated day in and day out."</p>
+                    <button class="btn btn-primary" onclick="startUnitExercises()" style="margin-right: 10px;">Go to Exercises</button>
+                    <button class="btn btn-secondary" onclick="resetCards()">Study Words Again</button>
+                </div>
+
+                <!-- Grammar Focus -->
+                <div class="grammar-section hidden" id="grammarSection">
+                    <h3>📘 Grammar Focus</h3>
+                    <div class="grammar-title" id="grammarTitle"></div>
+                    <p id="grammarExplanation"></p>
+                    <p class="grammar-example" id="grammarExample"></p>
+                </div>
+            </div>
+
+            <!-- Exercises Section -->
+            <div class="exercise-container" id="exerciseSection">
+                <h3>✍️ Exercises</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="startExercise('definition')">Matching Definition</button>
+                    <button class="btn btn-primary" onclick="startExercise('engToUz')">English → Uzbek</button>
+                    <button class="btn btn-primary" onclick="startExercise('uzToEng')">Uzbek → English</button>
+                    <button class="btn btn-primary" onclick="startExercise('gapfill')">Gap-Filling</button>
+                    <button class="btn btn-primary" id="grammarExerciseBtn" onclick="startGrammarExercise()">Grammar Practice</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exercise Test Page -->
+    <div id="exercisePage" class="hidden unit-page">
+        <div class="main-container">
+            <button class="back-button" onclick="backToUnit()">← Back to Unit</button>
+            <div class="exercise-container">
+                <div class="progress-panel">
+                    <div class="progress-info">
+                        <span id="questionCounter">Question 1 / 10</span>
+                        <span class="timer" id="timer">30s</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="exerciseProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="question-block" id="questionBlock">
+                    <div class="question-text" id="questionText"></div>
+                    <div class="options-container" id="optionsContainer"></div>
+                    <div class="answer-feedback hidden" id="answerFeedback"></div>
+                    <div class="question-navigation">
+                        <button class="btn btn-primary" id="nextQuestionBtn" onclick="goToNextQuestion()" disabled>Next Question</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Page -->
+    <div id="resultsPage" class="hidden unit-page">
+        <div class="main-container">
+            <div class="results-container">
+                <h2>📊 Test Results</h2>
+                <div class="score-display" id="scoreDisplay"></div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalQuestions">0</div>
+                        <div class="stat-label">Total Questions</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="correctAnswers" style="color: var(--success);">0</div>
+                        <div class="stat-label">Correct</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="wrongAnswers" style="color: var(--error);">0</div>
+                        <div class="stat-label">Wrong</div>
+                    </div>
+                </div>
+                <div style="margin-top: 30px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                    <button class="btn btn-primary" onclick="retakeTest()">Retake Test</button>
+                    <button class="btn btn-secondary" onclick="backToUnitFromResults()">Back to Unit</button>
+                    <button class="btn btn-secondary" onclick="showMainPage()">Back to Main</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grand Test Setup Page -->
+    <div id="grandTestSetup" class="hidden unit-page">
+        <div class="main-container">
+            <button class="back-button" onclick="showMainPage()">← Back to Main</button>
+            <div class="results-container">
+                <h2>🎯 Grand Test</h2>
+                <p style="margin: 20px 0;">Select test size:</p>
+                <div class="test-size-selector">
+                    <div class="size-option" onclick="selectTestSize(30, event)">
+                        <div style="font-size: 24px; font-weight: bold;">30</div>
+                        <div>Mini</div>
+                    </div>
+                    <div class="size-option" onclick="selectTestSize(50, event)">
+                        <div style="font-size: 24px; font-weight: bold;">50</div>
+                        <div>Medium</div>
+                    </div>
+                    <div class="size-option" onclick="selectTestSize(70, event)">
+                        <div style="font-size: 24px; font-weight: bold;">70</div>
+                        <div>Large</div>
+                    </div>
+                    <div class="size-option" onclick="selectTestSize(100, event)">
+                        <div style="font-size: 24px; font-weight: bold;">100</div>
+                        <div>Extra Large</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="margin-top: 30px; width: 100%;" onclick="beginGrandTest()">Start Grand Test</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedVoice = null;
+        let availableVoices = [];
+        let questionAnswered = false;
+        let exerciseSessionActive = false;
+        let exerciseStatusSent = false;
+
+        // Reading aloud state
+        let readingSpeed = 1.0;
+        let currentUtterance = null;
+        let isReading = false;
+
+        // Skimming state (words disappearing)
+        let skimmingSpeed = 1.0;
+        let skimmingInterval = null;
+        let isSkimming = false;
+        let originalText = '';
+        let originalWords = [];
+        let currentSkimIndex = 0;
+
+        function loadVoices() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices.length) return;
+
+            const englishVoices = voices.filter(voice => voice.lang && voice.lang.startsWith('en'));
+            availableVoices = (englishVoices.length ? englishVoices : voices).sort((a, b) => a.name.localeCompare(b.name));
+
+            // 1) Try to find "Juniper" first
+            let juniperVoice = availableVoices.find(v => /juniper/i.test(v.name));
+
+            // 2) Saved voice
+            const savedVoiceName = localStorage.getItem('elsPreferredVoice');
+            if (savedVoiceName) {
+                const savedVoice = availableVoices.find(v => v.name === savedVoiceName);
+                if (savedVoice) {
+                    selectedVoice = savedVoice;
+                }
+            }
+
+            // 3) Use Juniper if available and no saved preference
+            if (!selectedVoice && juniperVoice) {
+                selectedVoice = juniperVoice;
+            }
+
+            // 4) Prefer some nice default voices
+            const preferredVoices = [
+                "Microsoft Aria Online (Natural) - English (United States)",
+                "Microsoft Jenny Online (Natural) - English (United States)",
+                "Microsoft Guy Online (Natural) - English (United States)",
+                "Google US English",
+                "Google UK English Female",
+                "Google UK English Male"
+            ];
+
+            if (!selectedVoice) {
+                for (let name of preferredVoices) {
+                    const found = availableVoices.find(v => v.name === name);
+                    if (found) {
+                        selectedVoice = found;
+                        break;
+                    }
+                }
+            }
+
+            if (!selectedVoice) {
+                selectedVoice = availableVoices.find(v => /Microsoft|Google/i.test(v.name)) || availableVoices[0];
+            }
+
+            populateVoiceSelector();
+        }
+
+        function populateVoiceSelector() {
+            const selector = document.getElementById('voiceSelector');
+            if (!selector) return;
+
+            selector.innerHTML = '';
+
+            if (!availableVoices.length) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Voices unavailable';
+                selector.appendChild(option);
+                selector.disabled = true;
+                return;
+            }
+
+            selector.disabled = false;
+            availableVoices.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.name;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                if (selectedVoice && voice.name === selectedVoice.name) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
+            });
+        }
+
+        function changeVoice(voiceName) {
+            if (!voiceName) return;
+            const voice = availableVoices.find(v => v.name === voiceName);
+            if (voice) {
+                selectedVoice = voice;
+                localStorage.setItem('elsPreferredVoice', voice.name);
+            }
+        }
+
+        function createUtterance(text, rate = 0.95) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+                utterance.lang = selectedVoice.lang;
+            } else {
+                utterance.lang = 'en-US';
+            }
+            utterance.rate = rate;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            return utterance;
+        }
+
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        // Global State
+        let studentData = {
+            name: '',
+            surname: '',
+            group: '',
+            entryTime: null
+        };
+
+        let currentUnit = null;
+        let currentCardIndex = 0;
+        let cardShuffled = [];
+        let currentExerciseType = '';
+        let currentQuestion = 0;
+        let exerciseQuestions = [];
+        let exerciseTimer = null;
+        let exerciseScore = { correct: 0, wrong: 0 };
+        let fontSize = 18;
+        let selectedTestSize = 50;
+        let isGrandTest = false;
+
+        // Units data with grammar + gapfill sentences
+        const unitsData = [
+            {
+                id: 1,
+                title: "The Best Recruiting Agents",
+                text: "In 1849 a servant girl wrote home to her brother from Port Adelaide, South Australia: “I have accepted a situation at £20 per annum, so you can tell the servants in your neighbourhood not to stay in England for such wages as from £4 to £8 a year, but come here.” Letters such as these, which were circulated from kitchen to kitchen and from attic to attic in English homes, were the best recruiting agents for the colonies, which were then so desperately in need of young women to serve the pioneers who were trying to create a new life for themselves in their chosen countries. Other girls read about the much better prospects overseas in newspapers and magazines, which also published advertisements giving details of free or assisted passages.",
+                words: [
+                    { 
+                        word: "situation", 
+                        definition: "job (in the passage, as a servant)", 
+                        translation: "ish o‘rni (matnda xizmatkorlik ishi ma’nosida)",
+                        sentence: "She finally found a situation with kinder employers and better conditions."
+                    },
+                    { 
+                        word: "per annum", 
+                        definition: "for each year", 
+                        translation: "har yil uchun",
+                        sentence: "The contract offered a salary of twenty thousand dollars per annum."
+                    },
+                    { 
+                        word: "wages", 
+                        definition: "money paid for work, especially unskilled work", 
+                        translation: "ish haqi (oddiy ishlarda)",
+                        sentence: "Many workers complained that their wages were too low to cover basic living costs."
+                    },
+                    { 
+                        word: "circulate", 
+                        definition: "to move from place to place or person to person; to pass around", 
+                        translation: "aylanmoq, qo‘ldan qo‘lga o‘tmoq",
+                        sentence: "Rumours about the new law began to circulate in the small town."
+                    },
+                    { 
+                        word: "attic", 
+                        definition: "a room at the top of a house just below the roof", 
+                        translation: "cherdak",
+                        sentence: "They stored all the old furniture in the dusty attic."
+                    },
+                    { 
+                        word: "recruiting", 
+                        definition: "the process of finding new workers", 
+                        translation: "yollash, ishchilarni jalb qilish",
+                        sentence: "The company is currently recruiting new staff for its overseas branch."
+                    },
+                    { 
+                        word: "desperately", 
+                        definition: "very greatly or seriously", 
+                        translation: "juda jiddiy, keskin tarzda",
+                        sentence: "The town was desperately in need of fresh drinking water."
+                    },
+                    { 
+                        word: "pioneer", 
+                        definition: "one of the first people to move to a new country to work or settle", 
+                        translation: "birinchi ko‘chib borgan odam, poydevor qo‘yuvchi",
+                        sentence: "As a pioneer in this field, she developed techniques that others later copied."
+                    },
+                    { 
+                        word: "prospects", 
+                        definition: "chances of success, especially in work", 
+                        translation: "muvaffaqiyat imkoniyatlari, istiqbollar (ishda)",
+                        sentence: "He moved abroad because he believed his career prospects were better there."
+                    },
+                    { 
+                        word: "overseas", 
+                        definition: "abroad; in a foreign country across the sea", 
+                        translation: "dengiz ortidagi mamlakatlar, chet el",
+                        sentence: "Many students dream of studying overseas after they finish school."
+                    },
+                    { 
+                        word: "free", 
+                        definition: "without payment; costing nothing", 
+                        translation: "bepul, tekin",
+                        sentence: "In some cities, public museums are free for local residents."
+                    },
+                    { 
+                        word: "assisted", 
+                        definition: "helped financially, especially for travel costs", 
+                        translation: "moliyaviy yordam ko‘rsatilgan",
+                        sentence: "Many migrants travelled on assisted passages paid partly by the government."
+                    },
+                    { 
+                        word: "passage", 
+                        definition: "a journey by ship from one place to another", 
+                        translation: "dengiz orqali safar",
+                        sentence: "The family booked a passage to Australia on a large passenger ship."
+                    }
+                ],
+                grammar: {
+                    title: "Past Perfect vs Past Simple in Narratives",
+                    explanation: "Use the past perfect to talk about an earlier past action that happened before another past event. Use the past simple for the main sequence of events.",
+                    example: "She had written several letters before she finally accepted a situation in Australia.",
+                    questionText: "By the time she moved to Australia, she ___ several letters to her brother.",
+                    options: [
+                        "had written",
+                        "wrote",
+                        "has written",
+                        "was writing"
+                    ],
+                    correctIndex: 0
+                }
+            },
+            {
+                id: 2,
+                title: "Bringing Back Lost Memories",
+                text: "Our unconscious mind contains many millions of past experiences that appear to be lost forever. However, several psychological techniques can bring back forgotten memories. One method is free association, used by psychiatrists. When a patient allows their mind to wander at will, it may reveal clues to forgotten events which, if carefully explored, can uncover entire networks of hidden ideas and past fears. Certain drugs and hypnotism can also help access the unconscious mind.",
+                words: [
+                    { 
+                        word: "forever", 
+                        definition: "for all time", 
+                        translation: "umrbod",
+                        sentence: "She believed that the embarrassing moment would stay in her mind forever."
+                    },
+                    { 
+                        word: "device", 
+                        definition: "method for doing something or achieving a result", 
+                        translation: "usul, metod",
+                        sentence: "Free association is a useful device for exploring a patient’s hidden thoughts."
+                    },
+                    { 
+                        word: "wander", 
+                        definition: "let your thoughts move without focus", 
+                        translation: "daydib yurmoq",
+                        sentence: "During the lesson, his mind began to wander and he stopped listening."
+                    },
+                    { 
+                        word: "at will", 
+                        definition: "whenever and as much as you want", 
+                        translation: "istagancha",
+                        sentence: "In free association, patients are encouraged to speak at will without planning."
+                    },
+                    { 
+                        word: "clue", 
+                        definition: "information that helps solve a problem", 
+                        translation: "kalit, jumboq yechimi",
+                        sentence: "The small detail in his dream gave the therapist an important clue."
+                    },
+                    { 
+                        word: "pursue", 
+                        definition: "try to learn more through questioning", 
+                        translation: "kuzatmoq",
+                        sentence: "The researcher decided to pursue this surprising result in more detail."
+                    },
+                    { 
+                        word: "network", 
+                        definition: "a connected system of many things", 
+                        translation: "tizim",
+                        sentence: "Memories can be linked together in a complex network of ideas."
+                    },
+                    { 
+                        word: "terror", 
+                        definition: "something that causes great fear", 
+                        translation: "dahshat, qo‘rquv",
+                        sentence: "As a child he experienced great terror during thunderstorms."
+                    },
+                    { 
+                        word: "tremendous", 
+                        definition: "very great or important", 
+                        translation: "ulkan miqyosdagi",
+                        sentence: "This discovery had a tremendous influence on modern psychology."
+                    }
+                ],
+                grammar: {
+                    title: "Using “Would” to Talk About Past Habits",
+                    explanation: "We use “would” to describe repeated actions in the past, especially in stories, when the time period is already clear.",
+                    example: "During therapy, he would talk for hours about his childhood memories.",
+                    questionText: "When he was a child, he ___ for hours about his strange dreams.",
+                    options: [
+                        "would talk",
+                        "is talking",
+                        "has talked",
+                        "talks"
+                    ],
+                    correctIndex: 0
+                }
+            },
+            {
+                id: 3,
+                title: "Palm Trees",
+                text: "Among the more than 2,500 species of palm trees worldwide, the Palmyra palm is second only to the coconut palm in importance. It provides food and over a hundred useful end-products. To obtain most of its benefits, the tree must be climbed twice daily to extract nutritious juice from its flower-bunches. This juice, converted through various methods, forms the basis of many products. However, collecting it is arduous and often dangerous, as the trees can reach heights of over 30 meters.",
+                words: [
+                    { 
+                        word: "plus", 
+                        definition: "more than", 
+                        translation: "…dan ko‘p",
+                        sentence: "The tree can live for fifty years plus, if it is well looked after."
+                    },
+                    { 
+                        word: "yield", 
+                        definition: "produce naturally", 
+                        translation: "hosil bermoq",
+                        sentence: "These fields yield enough grain to feed the entire village."
+                    },
+                    { 
+                        word: "end-product", 
+                        definition: "final product after processing", 
+                        translation: "tayyor mahsulot",
+                        sentence: "Sugar is the main end-product of processing the sweet juice."
+                    },
+                    { 
+                        word: "obtain", 
+                        definition: "to get", 
+                        translation: "ega bo‘lmoq",
+                        sentence: "Workers must climb the palm to obtain the fresh juice every morning."
+                    },
+                    { 
+                        word: "majority", 
+                        definition: "more than half", 
+                        translation: "asosiy, ko‘pchilik",
+                        sentence: "The majority of villagers depend on the palm industry for income."
+                    },
+                    { 
+                        word: "benefit", 
+                        definition: "something useful or good", 
+                        translation: "foyda",
+                        sentence: "One major benefit of this tree is that every part can be used."
+                    },
+                    { 
+                        word: "extract", 
+                        definition: "to take out from something", 
+                        translation: "ajratib olmoq",
+                        sentence: "They extract the sap from the flower-bunches using simple tools."
+                    },
+                    { 
+                        word: "nutritious", 
+                        definition: "having high food value", 
+                        translation: "o‘zuqaviy, to‘yimli",
+                        sentence: "The juice is highly nutritious and is often given to children."
+                    },
+                    { 
+                        word: "convert", 
+                        definition: "to change in form", 
+                        translation: "o‘zgartirmoq",
+                        sentence: "Local factories convert the liquid into sugar and sweets."
+                    },
+                    { 
+                        word: "arduous", 
+                        definition: "requiring a lot of effort", 
+                        translation: "qiyin, mehnat talab",
+                        sentence: "Climbing tall trees every day is an arduous task."
+                    },
+                    { 
+                        word: "top", 
+                        definition: "to be higher than", 
+                        translation: "…dan balandroq bo‘lmoq",
+                        sentence: "Some palms top thirty metres and sway in the strong wind."
+                    }
+                ],
+                grammar: {
+                    title: "Passive Voice for Processes",
+                    explanation: "We often use the passive voice to describe processes when the action is more important than the person doing it.",
+                    example: "The juice is collected twice a day and then converted into sugar.",
+                    questionText: "In many villages, the juice ___ into several different products.",
+                    options: [
+                        "is converted",
+                        "converts",
+                        "was converting",
+                        "has converting"
+                    ],
+                    correctIndex: 0
+                }
+            },
+            {
+                id: 4,
+                title: "Overreacting to a Joke",
+                text: "People who laugh the longest and loudest at retold jokes often do not have a strong sense of humour. Though they may not admit it, they vaguely feel this weakness and sometimes go to extremes to hide it. A mediocre joke may get the same reaction from them as a genuinely funny one. Psychological research shows that people with a genuinely keen sense of humour do not laugh excessively. They appreciate humour deeply but remain discriminating and never overreact.",
+                words: [
+                    { 
+                        word: "habitually", 
+                        definition: "usually; according to someone's normal behaviour", 
+                        translation: "odatdagidek",
+                        sentence: "He habitually tells the same joke at every family gathering."
+                    },
+                    { 
+                        word: "retell", 
+                        definition: "to repeat a story", 
+                        translation: "qayta aytmoq",
+                        sentence: "She likes to retell funny stories she has heard at work."
+                    },
+                    { 
+                        word: "possess", 
+                        definition: "to have or own", 
+                        translation: "egalik qilmoq",
+                        sentence: "Not everyone possesses the ability to see subtle humour."
+                    },
+                    { 
+                        word: "particularly", 
+                        definition: "especially; noticeably", 
+                        translation: "ayniqsa, sezilarli",
+                        sentence: "He is particularly sensitive to jokes about his appearance."
+                    },
+                    { 
+                        word: "keen", 
+                        definition: "strong, sharp, highly aware", 
+                        translation: "kuchli, sezgir",
+                        sentence: "She has a keen sense of humour and rarely laughs at silly jokes."
+                    },
+                    { 
+                        word: "sense of humour", 
+                        definition: "ability to see when something is funny", 
+                        translation: "kulgi hissi",
+                        sentence: "His dry sense of humour is not understood by everyone."
+                    },
+                    { 
+                        word: "vaguely", 
+                        definition: "not clearly", 
+                        translation: "noaniq",
+                        sentence: "He vaguely remembered hearing that joke before."
+                    },
+                    { 
+                        word: "deficiency", 
+                        definition: "lack of something", 
+                        translation: "kamchilik",
+                        sentence: "They tried to hide their deficiency in social skills by laughing loudly."
+                    },
+                    { 
+                        word: "frequently", 
+                        definition: "often", 
+                        translation: "tez-tez",
+                        sentence: "The comedian frequently tests new material on small audiences."
+                    },
+                    { 
+                        word: "go to extremes", 
+                        definition: "do more than acceptable", 
+                        translation: "oshirib yubormoq",
+                        sentence: "Some people go to extremes to attract attention during a party."
+                    },
+                    { 
+                        word: "mediocre", 
+                        definition: "not very good", 
+                        translation: "o‘rtacha",
+                        sentence: "The film was mediocre, but the audience laughed as if it were brilliant."
+                    },
+                    { 
+                        word: "likely", 
+                        definition: "probable", 
+                        translation: "ehtimol",
+                        sentence: "It is likely that they will forget the joke by tomorrow."
+                    },
+                    { 
+                        word: "get a rise out of", 
+                        definition: "cause a reaction", 
+                        translation: "reaksiya chaqirmoq",
+                        sentence: "He told a rude story just to get a rise out of his friends."
+                    },
+                    { 
+                        word: "likewise", 
+                        definition: "in a similar way", 
+                        translation: "shuningdek",
+                        sentence: "She smiled, and he likewise tried to appear friendly."
+                    },
+                    { 
+                        word: "be prone", 
+                        definition: "likely to do something", 
+                        translation: "moyil bo‘lmoq",
+                        sentence: "People who are tired are more prone to overreact to small things."
+                    },
+                    { 
+                        word: "appreciative", 
+                        definition: "showing enjoyment or understanding", 
+                        translation: "qadrlovchi",
+                        sentence: "The audience was quiet but clearly appreciative of the clever humour."
+                    },
+                    { 
+                        word: "discriminating", 
+                        definition: "able to judge quality well", 
+                        translation: "farqlay oladigan",
+                        sentence: "Discriminating listeners do not laugh at every single joke."
+                    }
+                ],
+                grammar: {
+                    title: "Adverbs of Frequency and Degree",
+                    explanation: "We use adverbs like “frequently”, “often”, “rarely” and “slightly”, “deeply”, “extremely” to show how often or how strongly something happens.",
+                    example: "People with a keen sense of humour rarely laugh excessively.",
+                    questionText: "People who feel insecure are ___ likely to go to extremes to hide it.",
+                    options: [
+                        "more",
+                        "most",
+                        "much",
+                        "many"
+                    ],
+                    correctIndex: 0
+                }
+            },
+            {
+                id: 5,
+                title: "Alpine Forests",
+                text: "Alpine forests act as lifeguards for the snowy mountain peaks of the Alps. They naturally protect against avalanches and landslides. However, the expanding skiing industry, while beneficial for poor Alpine farmers, is harming the environment. Trees have been felled to make space for ski runs, car parks, and hotels. Meadows have been abandoned as farmers focus on tourism. As a result, avalanches have become more common. Experts estimate that two-thirds of the avalanches reaching inhabited areas each year are caused by forest depletion.",
+                words: [
+                    { 
+                        word: "lifeguard", 
+                        definition: "a person who protects others from danger in water", 
+                        translation: "qutqaruvchi",
+                        sentence: "In this context, the forest acts like a lifeguard for the mountain slopes."
+                    },
+                    { 
+                        word: "peak", 
+                        definition: "top of a mountain", 
+                        translation: "cho‘qqi",
+                        sentence: "Fresh snow covered each peak after the storm."
+                    },
+                    { 
+                        word: "barrier", 
+                        definition: "something that blocks movement", 
+                        translation: "to‘siq",
+                        sentence: "Thick lines of trees form a natural barrier against avalanches."
+                    },
+                    { 
+                        word: "avalanche", 
+                        definition: "mass of snow sliding down a mountain", 
+                        translation: "qor ko‘chkisi",
+                        sentence: "The village was nearly destroyed by a sudden avalanche."
+                    },
+                    { 
+                        word: "landslide", 
+                        definition: "movement of rocks and soil downward", 
+                        translation: "yer ko‘chkisi",
+                        sentence: "Heavy rain triggered a landslide that blocked the road."
+                    },
+                    { 
+                        word: "boon", 
+                        definition: "something helpful", 
+                        translation: "naf, foyda",
+                        sentence: "Tourism can be a boon to small villages if it is managed carefully."
+                    },
+                    { 
+                        word: "fell", 
+                        definition: "cut down trees", 
+                        translation: "kesmoq",
+                        sentence: "Developers have already felled large areas of forest for ski resorts."
+                    },
+                    { 
+                        word: "meadow", 
+                        definition: "grassland", 
+                        translation: "maysazor",
+                        sentence: "In summer the meadow is full of wildflowers."
+                    },
+                    { 
+                        word: "abandon", 
+                        definition: "leave behind", 
+                        translation: "tashlab ketmoq",
+                        sentence: "Many farmers abandon their fields when tourism becomes more profitable."
+                    },
+                    { 
+                        word: "keen", 
+                        definition: "eager", 
+                        translation: "mukkasidan ketmoq",
+                        sentence: "Local businesses are keen to exploit every opportunity in the skiing industry."
+                    },
+                    { 
+                        word: "exploit", 
+                        definition: "use for profit", 
+                        translation: "foydalanmoq",
+                        sentence: "Some companies exploit natural resources without considering long-term damage."
+                    },
+                    { 
+                        word: "phenomenon", 
+                        definition: "observable event", 
+                        translation: "hodisa",
+                        sentence: "Global warming is a complex phenomenon with many causes."
+                    },
+                    { 
+                        word: "estimate", 
+                        definition: "calculate roughly", 
+                        translation: "chamalamoq",
+                        sentence: "Experts estimate that the number of avalanches has doubled."
+                    },
+                    { 
+                        word: "descend", 
+                        definition: "move downward", 
+                        translation: "pastga tushmoq",
+                        sentence: "Snow can suddenly descend from the peak, destroying everything below."
+                    },
+                    { 
+                        word: "inhabited", 
+                        definition: "with people living there", 
+                        translation: "aholi yashaydigan",
+                        sentence: "Only a few inhabited villages remain in the high valleys."
+                    },
+                    { 
+                        word: "depletion", 
+                        definition: "reduction; running out", 
+                        translation: "kamayish",
+                        sentence: "Forest depletion has made the slopes less stable and more dangerous."
+                    }
+                ],
+                grammar: {
+                    title: "Cause and Effect with “as a result” and “due to”",
+                    explanation: "We use phrases like “as a result” and “due to” to clearly show cause and effect in academic-style writing.",
+                    example: "Trees have been felled for ski runs; as a result, avalanches have become more common.",
+                    questionText: "Many meadows have been abandoned; ___, traditional farming has almost disappeared.",
+                    options: [
+                        "as a result",
+                        "in spite of",
+                        "even though",
+                        "otherwise"
+                    ],
+                    correctIndex: 0
+                }
+            }
+        ];
+
+        // Add placeholder units 6–75 (Coming soon)
+        for (let i = 6; i <= 75; i++) {
+            unitsData.push({
+                id: i,
+                title: `Unit ${i} – Coming Soon`,
+                comingSoon: true
+            });
+        }
+
+        // Initialize
+        window.onload = function() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            loadSavedData();
+            renderUnits();
+            document.getElementById('readingSpeedDisplay').textContent = readingSpeed.toFixed(1) + 'x';
+            document.getElementById('skimmingSpeedDisplay').textContent = skimmingSpeed.toFixed(1) + 'x';
+
+            if ('speechSynthesis' in window) {
+                loadVoices();
+            } else {
+                const selector = document.getElementById('voiceSelector');
+                if (selector) {
+                    selector.innerHTML = '<option value="">Not supported</option>';
+                    selector.disabled = true;
+                }
+            }
+
+            updateReadingButton();
+            updateSkimmingButton();
+        };
+
+        // Load saved name and surname
+        function loadSavedData() {
+            const savedName = localStorage.getItem('elsName');
+            const savedSurname = localStorage.getItem('elsSurname');
+            if (savedName) document.getElementById('nameInput').value = savedName;
+            if (savedSurname) document.getElementById('surnameInput').value = savedSurname;
+        }
+
+        // Update date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            const el = document.getElementById('datetimeDisplay');
+            if (el) {
+                el.textContent = now.toLocaleDateString('en-US', options);
+            }
+        }
+
+        // Enter app
+        function enterApp(event) {
+            event.preventDefault();
+            const name = document.getElementById('nameInput').value.trim();
+            const surname = document.getElementById('surnameInput').value.trim();
+            const group = document.getElementById('groupInput').value.trim();
+
+            if (!name || !surname || !group) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            studentData.name = name;
+            studentData.surname = surname;
+            studentData.group = group;
+            studentData.entryTime = new Date();
+
+            // Save name and surname only
+            localStorage.setItem('elsName', name);
+            localStorage.setItem('elsSurname', surname);
+
+            document.getElementById('welcomePage').classList.add('hidden');
+            document.getElementById('mainPage').classList.remove('hidden');
+            document.getElementById('globalHeader').classList.remove('hidden');
+        }
+
+        // Render units
+        function renderUnits() {
+            const grid = document.getElementById('unitsGrid');
+            grid.innerHTML = '';
+            
+            unitsData.forEach(unit => {
+                const completed = !unit.comingSoon && isUnitCompleted(unit.id);
+                const progress = unit.comingSoon ? 0 : getUnitProgress(unit.id);
+                
+                const card = document.createElement('div');
+                card.className = `unit-card ${completed ? 'completed' : ''} ${unit.comingSoon ? 'coming-soon' : ''}`;
+                
+                card.onclick = () => {
+                    if (unit.comingSoon) {
+                        showModal("<h3>⏳ Coming Soon</h3><p>This unit will be added later.</p>");
+                    } else {
+                        openUnit(unit.id);
+                    }
+                };
+                
+                card.innerHTML = `
+                    <div class="unit-number">Unit ${unit.id}</div>
+                    <div class="unit-title">${unit.title}</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                    ${unit.comingSoon ? '<div class="coming-soon-label">Coming soon</div>' : ''}
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // Filter units
+        function filterUnits() {
+            const search = document.getElementById('searchBar').value.toLowerCase();
+            const cards = document.querySelectorAll('.unit-card');
+            
+            cards.forEach(card => {
+                const title = card.querySelector('.unit-title').textContent.toLowerCase();
+                card.style.display = title.includes(search) ? 'block' : 'none';
+            });
+        }
+
+        // Check if unit is completed
+        function isUnitCompleted(unitId) {
+            const completed = localStorage.getItem(`unit_${unitId}_completed`);
+            return completed === 'true';
+        }
+
+        // Get unit progress
+        function getUnitProgress(unitId) {
+            const progress = localStorage.getItem(`unit_${unitId}_progress`);
+            return progress ? parseInt(progress) : 0;
+        }
+
+        // Open unit
+        function openUnit(unitId) {
+            currentUnit = unitsData.find(u => u.id === unitId);
+            if (!currentUnit || currentUnit.comingSoon) return;
+
+            stopSkimming();
+            stopReadingAloud();
+
+            document.getElementById('mainPage').classList.add('hidden');
+            document.getElementById('unitPage').classList.remove('hidden');
+            document.getElementById('unitPageTitle').textContent = `Unit ${currentUnit.id}: ${currentUnit.title}`;
+            const textEl = document.getElementById('textContent');
+
+            originalText = currentUnit.text;
+            originalWords = originalText.split(/\s+/);
+            currentSkimIndex = 0;
+
+            textEl.textContent = originalText;
+            textEl.scrollTop = 0;
+            
+            // Initialize cards
+            cardShuffled = [...currentUnit.words].sort(() => Math.random() - 0.5);
+            currentCardIndex = 0;
+            showCard();
+            
+            document.getElementById('cardsCompleteButtons').classList.add('hidden');
+
+            // Grammar section
+            renderGrammarSection();
+
+            updateReadingButton();
+            updateSkimmingButton();
+        }
+
+        function renderGrammarSection() {
+            const section = document.getElementById('grammarSection');
+            const btn = document.getElementById('grammarExerciseBtn');
+            if (!currentUnit || !currentUnit.grammar) {
+                if (section) section.classList.add('hidden');
+                if (btn) btn.disabled = true;
+                return;
+            }
+
+            if (section) {
+                section.classList.remove('hidden');
+                document.getElementById('grammarTitle').textContent = currentUnit.grammar.title;
+                document.getElementById('grammarExplanation').textContent = currentUnit.grammar.explanation;
+                document.getElementById('grammarExample').textContent = "Example: " + currentUnit.grammar.example;
+            }
+            if (btn) btn.disabled = false;
+        }
+
+        // Show main page
+        function showMainPage() {
+            sendIncompleteIfNeeded('Returned to main page');
+            stopSkimming();
+            stopReadingAloud();
+            document.getElementById('unitPage').classList.add('hidden');
+            document.getElementById('exercisePage').classList.add('hidden');
+            document.getElementById('resultsPage').classList.add('hidden');
+            document.getElementById('grandTestSetup').classList.add('hidden');
+            document.getElementById('mainPage').classList.remove('hidden');
+            renderUnits();
+        }
+
+        // Reading aloud controls
+        function toggleReadingAloud() {
+            if (isReading) {
+                stopReadingAloud();
+            } else {
+                startReadingAloud();
+            }
+        }
+
+        function startReadingAloud() {
+            if (!('speechSynthesis' in window)) {
+                alert('Text-to-speech is not supported in your browser.');
+                return;
+            }
+            if (!currentUnit) return;
+
+            stopReadingAloud(); // cancel any previous
+
+            const text = `${currentUnit.title}. ${currentUnit.text}`;
+            const utterance = createUtterance(text, readingSpeed);
+            currentUtterance = utterance;
+            isReading = true;
+            updateReadingButton();
+
+            utterance.onend = () => {
+                isReading = false;
+                currentUtterance = null;
+                updateReadingButton();
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopReadingAloud() {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            isReading = false;
+            currentUtterance = null;
+            updateReadingButton();
+        }
+
+        function changeReadingSpeed(delta) {
+            readingSpeed += delta;
+            readingSpeed = Math.max(0.2, Math.min(2.0, readingSpeed));
+            const display = document.getElementById('readingSpeedDisplay');
+            if (display) {
+                display.textContent = readingSpeed.toFixed(1) + 'x';
+            }
+        }
+
+        function updateReadingButton() {
+            const btn = document.getElementById('readAloudToggleBtn');
+            if (!btn) return;
+            if (isReading) {
+                btn.textContent = '⏹ Stop read-aloud';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.textContent = '🎧 Start read-aloud';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            }
+        }
+
+        // Skimming controls (words disappearing)
+        function toggleSkimming() {
+            if (isSkimming) {
+                stopSkimming();
+            } else {
+                startSkimming();
+            }
+        }
+
+        function changeSkimmingSpeed(delta) {
+            skimmingSpeed += delta;
+            skimmingSpeed = Math.max(0.2, Math.min(12, skimmingSpeed));
+            const display = document.getElementById('skimmingSpeedDisplay');
+            if (display) {
+                display.textContent = skimmingSpeed.toFixed(1) + 'x';
+            }
+        }
+
+        /**
+         * Start skimming: words begin to disappear one by one while the text remains
+         * fixed on the page.  The disappearance interval is based on the skimming
+         * speed (higher speed shortens the wait between words).  Each word is
+         * wrapped in a <span> element so that hiding them does not shift the
+         * layout or cause the remaining text to reflow.
+         */
+        function startSkimming() {
+            const textEl = document.getElementById('textContent');
+            if (!textEl || !originalWords.length) return;
+
+            stopSkimming(); // reset previous session if any
+
+            isSkimming = true;
+            currentSkimIndex = 0;
+
+            // Replace the text content with spans so we can hide each word individually
+            textEl.innerHTML = originalWords.map(word => {
+                // Avoid injecting trailing spaces inside spans; add a margin via CSS instead.
+                return `<span class="skimming-word">${word}</span>`;
+            }).join(' ');
+            updateSkimmingButton();
+
+            // Base interval in milliseconds per word at 1.0x speed.  A value of 1000ms
+            // means one word disappears each second at the default speed.  As the user
+            // increases skimming speed, the interval decreases proportionally.
+            const baseIntervalMs = 1000;
+            const intervalDuration = baseIntervalMs / skimmingSpeed;
+
+            skimmingInterval = setInterval(() => {
+                if (currentSkimIndex >= originalWords.length) {
+                    stopSkimming();
+                    return;
+                }
+                const span = textEl.children[currentSkimIndex];
+                if (span) {
+                    span.style.visibility = 'hidden';
+                }
+                currentSkimIndex++;
+            }, intervalDuration);
+        }
+
+        /**
+         * Stop skimming and restore the original text.  All intervals are cleared and
+         * the text is returned to its normal state.
+         */
+        function stopSkimming() {
+            if (skimmingInterval) {
+                clearInterval(skimmingInterval);
+                skimmingInterval = null;
+            }
+            if (!isSkimming) {
+                updateSkimmingButton();
+                return;
+            }
+            isSkimming = false;
+            // Restore the original text to ensure that hidden spans do not persist
+            const textEl = document.getElementById('textContent');
+            if (textEl) {
+                textEl.textContent = originalText;
+            }
+            updateSkimmingButton();
+        }
+
+        function updateSkimmingButton() {
+            const btn = document.getElementById('skimmingToggleBtn');
+            if (!btn) return;
+            if (isSkimming) {
+                btn.textContent = '⏹ Stop skimming';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.textContent = '⚡ Start skimming';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            }
+        }
+
+        // Change font size
+        function changeFontSize(delta) {
+            fontSize += delta * 2;
+            fontSize = Math.max(14, Math.min(28, fontSize));
+            document.getElementById('textContent').style.fontSize = fontSize + 'px';
+        }
+
+        // Show card
+        function showCard() {
+            if (!cardShuffled || !cardShuffled.length) {
+                document.getElementById('cardWord').textContent = "No words";
+                document.getElementById('cardDefinition').textContent = "";
+                document.getElementById('cardTranslation').textContent = "";
+                document.getElementById('cardProgress').textContent = "";
+                document.getElementById('cardsCompleteButtons').classList.add('hidden');
+                return;
+            }
+
+            if (currentCardIndex >= cardShuffled.length) {
+                document.getElementById('cardsCompleteButtons').classList.remove('hidden');
+                createFireworks();
+                return;
+            }
+
+            const word = cardShuffled[currentCardIndex];
+            document.getElementById('cardWord').textContent = word.word;
+            document.getElementById('cardDefinition').textContent = word.definition;
+            document.getElementById('cardTranslation').textContent = word.translation;
+            document.getElementById('cardProgress').textContent = `Card ${currentCardIndex + 1} / ${cardShuffled.length}`;
+            document.getElementById('flipCard').classList.remove('flipped');
+        }
+
+        // Flip card
+        function flipCard() {
+            document.getElementById('flipCard').classList.toggle('flipped');
+        }
+
+        // Next card
+        function nextCard() {
+            if (!cardShuffled.length) return;
+            currentCardIndex++;
+            showCard();
+        }
+
+        // Previous card
+        function previousCard() {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                showCard();
+            }
+        }
+
+        // Reset cards
+        function resetCards() {
+            if (!currentUnit || !currentUnit.words) return;
+            cardShuffled = [...currentUnit.words].sort(() => Math.random() - 0.5);
+            currentCardIndex = 0;
+            showCard();
+            document.getElementById('cardsCompleteButtons').classList.add('hidden');
+        }
+
+        // Speak word
+        function speakWord(event) {
+            event.stopPropagation();
+            if (!('speechSynthesis' in window)) {
+                alert('Text-to-speech not supported in your browser');
+                return;
+            }
+            if (!cardShuffled.length) return;
+            const word = cardShuffled[currentCardIndex].word;
+            const utterance = createUtterance(word, 0.95);
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Start unit exercises
+        function startUnitExercises() {
+            const el = document.getElementById('exerciseSection');
+            el.classList.remove('hidden');
+            el.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Back to unit
+        function backToUnit() {
+            if (exerciseTimer) clearInterval(exerciseTimer);
+            sendIncompleteIfNeeded('Returned to unit page');
+            document.getElementById('exercisePage').classList.add('hidden');
+            document.getElementById('unitPage').classList.remove('hidden');
+        }
+
+        // Start vocabulary exercise
+        function startExercise(type) {
+            if (!currentUnit || !currentUnit.words || !currentUnit.words.length) {
+                alert('This unit has no active vocabulary yet.');
+                return;
+            }
+            currentExerciseType = type;
+            isGrandTest = false;
+            const count = currentUnit.words.length;
+            generateExerciseQuestions(currentUnit.words, type, count);
+            showCountdown(() => {
+                document.getElementById('unitPage').classList.add('hidden');
+                document.getElementById('exercisePage').classList.remove('hidden');
+                startExerciseTest();
+            });
+        }
+
+        // Start grammar exercise (one MCQ)
+        function startGrammarExercise() {
+            if (!currentUnit || !currentUnit.grammar) {
+                alert('Grammar practice for this unit is coming soon.');
+                return;
+            }
+            currentExerciseType = 'grammar';
+            isGrandTest = false;
+            generateGrammarQuestion(currentUnit.grammar);
+            showCountdown(() => {
+                document.getElementById('unitPage').classList.add('hidden');
+                document.getElementById('exercisePage').classList.remove('hidden');
+                startExerciseTest();
+            });
+        }
+
+        // Generate vocab exercise questions
+        function generateExerciseQuestions(words, type, count) {
+            exerciseQuestions = [];
+            exerciseScore = { correct: 0, wrong: 0 };
+            
+            const pool = [...words].sort(() => Math.random() - 0.5).slice(0, Math.min(count, words.length));
+            
+            pool.forEach(correctWord => {
+                const wrongPool = words.filter(w => w !== correctWord);
+                const wrongWords = wrongPool.sort(() => Math.random() - 0.5).slice(0, 3);
+                const optionsCandidates = [correctWord, ...wrongWords].sort(() => Math.random() - 0.5);
+
+                let question = {};
+                switch(type) {
+                    case 'definition':
+                        question = {
+                            text: correctWord.word,
+                            options: optionsCandidates.map(w => w.definition),
+                            correct: correctWord.definition,
+                            type: 'Matching Definition'
+                        };
+                        break;
+                    case 'engToUz':
+                        question = {
+                            text: correctWord.word,
+                            options: optionsCandidates.map(w => w.translation),
+                            correct: correctWord.translation,
+                            type: 'English → Uzbek'
+                        };
+                        break;
+                    case 'uzToEng':
+                        question = {
+                            text: correctWord.translation,
+                            options: optionsCandidates.map(w => w.word),
+                            correct: correctWord.word,
+                            type: 'Uzbek → English'
+                        };
+                        break;
+                    case 'gapfill':
+                        const baseSentence = correctWord.sentence || `The concept of ${correctWord.word} is important in modern society.`;
+                        const gapRegex = new RegExp(correctWord.word, 'i');
+                        const gapSentence = baseSentence.replace(gapRegex, '______');
+                        question = {
+                            text: gapSentence,
+                            options: optionsCandidates.map(w => w.word),
+                            correct: correctWord.word,
+                            type: 'Gap-Filling'
+                        };
+                        break;
+                }
+                exerciseQuestions.push(question);
+            });
+
+            exerciseQuestions.sort(() => Math.random() - 0.5);
+        }
+
+        // Grammar question generator
+        function generateGrammarQuestion(grammar) {
+            exerciseQuestions = [];
+            exerciseScore = { correct: 0, wrong: 0 };
+
+            exerciseQuestions.push({
+                text: grammar.questionText,
+                options: grammar.options,
+                correct: grammar.options[grammar.correctIndex],
+                type: 'Grammar Practice'
+            });
+        }
+
+        // Start exercise test
+        function startExerciseTest() {
+            currentQuestion = 0;
+            questionAnswered = false;
+            exerciseSessionActive = true;
+            exerciseStatusSent = false;
+            showQuestion();
+        }
+
+        function resetQuestionUI() {
+            questionAnswered = false;
+            const feedbackEl = document.getElementById('answerFeedback');
+            if (feedbackEl) {
+                feedbackEl.classList.add('hidden');
+                feedbackEl.textContent = '';
+            }
+            const nextBtn = document.getElementById('nextQuestionBtn');
+            if (nextBtn) {
+                nextBtn.disabled = true;
+                nextBtn.textContent = currentQuestion === exerciseQuestions.length - 1 ? 'See Results' : 'Next Question';
+            }
+        }
+
+        function displayAnswerFeedback(isCorrect, correctAnswer, reason = '') {
+            const feedbackEl = document.getElementById('answerFeedback');
+            if (!feedbackEl) return;
+            feedbackEl.classList.remove('hidden');
+            feedbackEl.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
+            if (isCorrect) {
+                feedbackEl.textContent = '✅ Correct! Keep going.';
+            } else {
+                const reasonText = reason ? `${reason}. ` : '';
+                feedbackEl.textContent = `❌ ${reasonText}Correct answer: ${correctAnswer}`;
+            }
+        }
+
+        function lockOptionButtons(correctAnswer, selectedBtn = null, isCorrect = false) {
+            const allButtons = document.querySelectorAll('.option-btn');
+            allButtons.forEach(button => {
+                button.style.pointerEvents = 'none';
+                if (button.dataset.value === correctAnswer) {
+                    button.classList.add('correct');
+                } else if (button === selectedBtn && !isCorrect) {
+                    button.classList.add('incorrect');
+                }
+            });
+        }
+
+        function enableNextButton() {
+            const nextBtn = document.getElementById('nextQuestionBtn');
+            if (nextBtn) {
+                nextBtn.disabled = false;
+                nextBtn.textContent = currentQuestion === exerciseQuestions.length - 1 ? 'See Results' : 'Next Question';
+            }
+        }
+
+        function goToNextQuestion() {
+            if (!questionAnswered) return;
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function getAnsweredCount() {
+            if (!exerciseQuestions.length) return 0;
+            return currentQuestion + (questionAnswered ? 1 : 0);
+        }
+
+        function sendIncompleteIfNeeded(reason = '') {
+            if (!exerciseSessionActive || exerciseStatusSent || !exerciseQuestions.length) return;
+            const total = exerciseQuestions.length;
+            const answered = getAnsweredCount();
+            const percentage = total ? Math.round((exerciseScore.correct / total) * 100) : 0;
+            let extra = `Answered: ${answered}/${total}\n✅ Correct: ${exerciseScore.correct}\n❌ Wrong: ${exerciseScore.wrong}`;
+            if (reason) {
+                extra += `\nNote: ${reason}`;
+            }
+            sendResultToServer(percentage, total, 'Incomplete', extra);
+            exerciseStatusSent = true;
+            exerciseSessionActive = false;
+            questionAnswered = false;
+        }
+
+        // Show question
+        function showQuestion() {
+            if (currentQuestion >= exerciseQuestions.length) {
+                showResults();
+                return;
+            }
+
+            const question = exerciseQuestions[currentQuestion];
+            resetQuestionUI();
+            const progress = ((currentQuestion + 1) / exerciseQuestions.length) * 100;
+            
+            document.getElementById('questionCounter').textContent = `Question ${currentQuestion + 1} / ${exerciseQuestions.length}`;
+            document.getElementById('exerciseProgress').style.width = progress + '%';
+            document.getElementById('questionText').textContent = question.text;
+            
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option;
+                btn.dataset.value = option;
+                btn.onclick = () => checkAnswer(option, question.correct, btn);
+                optionsContainer.appendChild(btn);
+            });
+            
+            startTimer(question);
+        }
+
+        // Start timer
+        function startTimer(question) {
+            let timeLeft = 30;
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = timeLeft + 's';
+            timerEl.classList.remove('warning');
+            
+            if (exerciseTimer) clearInterval(exerciseTimer);
+            
+            exerciseTimer = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft + 's';
+                
+                if (timeLeft <= 10) {
+                    timerEl.classList.add('warning');
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(exerciseTimer);
+                    if (!questionAnswered) {
+                        questionAnswered = true;
+                        exerciseScore.wrong++;
+                        lockOptionButtons(question.correct);
+                        displayAnswerFeedback(false, question.correct, 'Time is up');
+                        enableNextButton();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Check answer
+        function checkAnswer(selected, correct, btn) {
+            if (questionAnswered) return;
+            clearInterval(exerciseTimer);
+            questionAnswered = true;
+            const isCorrect = selected === correct;
+            if (isCorrect) {
+                exerciseScore.correct++;
+            } else {
+                exerciseScore.wrong++;
+            }
+            lockOptionButtons(correct, btn, isCorrect);
+            displayAnswerFeedback(isCorrect, correct);
+            enableNextButton();
+        }
+
+        // Show results
+        function showResults() {
+            const total = exerciseQuestions.length;
+            const percentage = Math.round((exerciseScore.correct / total) * 100);
+            if (exerciseTimer) clearInterval(exerciseTimer);
+            exerciseSessionActive = false;
+            exerciseStatusSent = true;
+            questionAnswered = false;
+            
+            document.getElementById('exercisePage').classList.add('hidden');
+            document.getElementById('resultsPage').classList.remove('hidden');
+            
+            document.getElementById('scoreDisplay').textContent = `${exerciseScore.correct}/${total} (${percentage}%)`;
+            document.getElementById('totalQuestions').textContent = total;
+            document.getElementById('correctAnswers').textContent = exerciseScore.correct;
+            document.getElementById('wrongAnswers').textContent = exerciseScore.wrong;
+            
+            if (percentage >= 70) {
+                createFireworks();
+            }
+            
+            // Mark unit as completed
+            if (!isGrandTest && currentUnit) {
+                localStorage.setItem(`unit_${currentUnit.id}_completed`, 'true');
+                localStorage.setItem(`unit_${currentUnit.id}_progress`, '100');
+            }
+            
+            // Send to server
+            sendResultToServer(percentage, total, 'Completed');
+        }
+
+        // Retake test
+        function retakeTest() {
+            if (isGrandTest) {
+                document.getElementById('resultsPage').classList.add('hidden');
+                document.getElementById('grandTestSetup').classList.remove('hidden');
+            } else {
+                if (currentExerciseType === 'grammar') {
+                    generateGrammarQuestion(currentUnit.grammar);
+                } else {
+                    const count = currentUnit.words.length;
+                    generateExerciseQuestions(currentUnit.words, currentExerciseType, count);
+                }
+                showCountdown(() => {
+                    document.getElementById('resultsPage').classList.add('hidden');
+                    document.getElementById('exercisePage').classList.remove('hidden');
+                    startExerciseTest();
+                });
+            }
+        }
+
+        // Back to unit from results
+        function backToUnitFromResults() {
+            document.getElementById('resultsPage').classList.add('hidden');
+            document.getElementById('unitPage').classList.remove('hidden');
+        }
+
+        // Show countdown
+        function showCountdown(callback) {
+            const overlay = document.createElement('div');
+            overlay.className = 'countdown-overlay';
+            document.body.appendChild(overlay);
+            
+            let count = 3;
+            const numberEl = document.createElement('div');
+            numberEl.className = 'countdown-number';
+            numberEl.textContent = count;
+            overlay.appendChild(numberEl);
+            
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    numberEl.textContent = count;
+                    numberEl.style.animation = 'none';
+                    setTimeout(() => numberEl.style.animation = 'countdownAnim 1s ease-out', 10);
+                } else {
+                    numberEl.textContent = 'Go!';
+                    numberEl.style.animation = 'none';
+                    setTimeout(() => numberEl.style.animation = 'countdownAnim 1s ease-out', 10);
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.body.removeChild(overlay);
+                        callback();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        // Create fireworks
+        function createFireworks() {
+            const container = document.createElement('div');
+            container.className = 'fireworks';
+            document.body.appendChild(container);
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const x = Math.random() * window.innerWidth;
+                    const y = Math.random() * window.innerHeight * 0.5;
+                    
+                    for (let j = 0; j < 30; j++) {
+                        const particle = document.createElement('div');
+                        particle.className = 'firework';
+                        particle.style.left = x + 'px';
+                        particle.style.top = y + 'px';
+                        particle.style.background = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                        
+                        const angle = (Math.PI * 2 * j) / 30;
+                        const velocity = 50 + Math.random() * 100;
+                        particle.style.setProperty('--tx', Math.cos(angle) * velocity + 'px');
+                        particle.style.setProperty('--ty', Math.sin(angle) * velocity + 'px');
+                        
+                        container.appendChild(particle);
+                        
+                        setTimeout(() => particle.remove(), 1000);
+                    }
+                }, i * 200);
+            }
+            
+            setTimeout(() => container.remove(), 10000);
+        }
+
+        // Grand Test Functions
+        function startGrandTest() {
+            document.getElementById('mainPage').classList.add('hidden');
+            document.getElementById('grandTestSetup').classList.remove('hidden');
+        }
+
+        function selectTestSize(size, event) {
+            selectedTestSize = size;
+            document.querySelectorAll('.size-option').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+
+        function beginGrandTest() {
+            isGrandTest = true;
+            
+            const allWords = [];
+            unitsData.forEach(unit => {
+                if (!unit.comingSoon && unit.words) {
+                    allWords.push(...unit.words);
+                }
+            });
+            
+            if (!allWords.length) {
+                alert('No vocabulary is available for the grand test yet.');
+                return;
+            }
+
+            const totalQuestions = Math.min(selectedTestSize, allWords.length * 4);
+            const perType = Math.floor(totalQuestions / 4);
+            exerciseQuestions = [];
+            exerciseScore = { correct: 0, wrong: 0 };
+            
+            const types = ['definition', 'engToUz', 'uzToEng', 'gapfill'];
+
+            types.forEach(type => {
+                const shuffled = [...allWords].sort(() => Math.random() - 0.5).slice(0, perType);
+                generateExerciseQuestions(shuffled, type, perType);
+            });
+            
+            showCountdown(() => {
+                document.getElementById('grandTestSetup').classList.add('hidden');
+                document.getElementById('exercisePage').classList.remove('hidden');
+                startExerciseTest();
+            });
+        }
+
+        // Send result to backend API
+        async function sendResultToServer(percentage, total, status, extraDetails = '') {
+            const readableType = (t) => {
+                switch (t) {
+                    case 'definition': return 'Matching Definition';
+                    case 'engToUz': return 'English → Uzbek';
+                    case 'uzToEng': return 'Uzbek → English';
+                    case 'gapfill': return 'Gap-Filling';
+                    case 'grammar': return 'Grammar Practice';
+                    default: return 'Mixed';
+                }
+            };
+
+            const testName = isGrandTest
+                ? `Grand Test (${selectedTestSize} questions)`
+                : currentUnit
+                    ? `Unit ${currentUnit.id} – ${readableType(currentExerciseType)}`
+                    : 'Unit Test';
+
+            const payload = {
+                appName: 'ELS',
+                student: {
+                    name: studentData.name,
+                    surname: studentData.surname,
+                    group: studentData.group
+                },
+                timestamp: new Date().toISOString(),
+                score: {
+                    correct: exerciseScore.correct,
+                    total,
+                    percentage: isNaN(percentage) ? 0 : percentage
+                },
+                status,
+                mode: testName,
+                extraDetails
+            };
+
+            try {
+                await fetch('/api/sendResult', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (error) {
+                console.error('Failed to send result to server:', error);
+            }
+        }
+
+        // Send incomplete test notification on unload
+        window.addEventListener('beforeunload', function() {
+            sendIncompleteIfNeeded('Browser closed during exercise');
+        });
+
+        // Theme switching
+        function cycleTheme() {
+            const themes = ['light', 'soft-blue', 'dark'];
+            const current = document.body.getAttribute('data-theme') || 'light';
+            const currentIndex = themes.indexOf(current);
+            const nextIndex = (currentIndex + 1) % themes.length;
+            document.body.setAttribute('data-theme', themes[nextIndex]);
+        }
+
+        // Show progress dashboard
+        function showProgress() {
+            let html = '<h3>📊 Your Progress</h3><div style="margin-top: 20px;">';
+            
+            unitsData.forEach(unit => {
+                if (unit.comingSoon) {
+                    html += `
+                        <div style="padding: 15px; margin-bottom: 10px; background: var(--secondary-bg); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span><strong>Unit ${unit.id}:</strong> ${unit.title}</span>
+                            <span style="color: var(--warning);">Coming soon</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const completed = isUnitCompleted(unit.id);
+                const progress = getUnitProgress(unit.id);
+                let status = 'Not started';
+                if (completed) status = 'Completed';
+                else if (progress > 0) status = 'In progress';
+                
+                html += `
+                    <div style="padding: 15px; margin-bottom: 10px; background: var(--secondary-bg); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span><strong>Unit ${unit.id}:</strong> ${unit.title}</span>
+                        <span style="color: ${completed ? 'var(--success)' : 'var(--warning)'};">${status}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            showModal(html);
+        }
+
+        // Show modal
+        function showModal(content) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="modal-close" onclick="this.closest('.modal').remove()">×</span>
+                    ${content}
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>
