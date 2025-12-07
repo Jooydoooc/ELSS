@@ -386,7 +386,6 @@
             border-radius: 15px;
             margin-bottom: 30px;
             box-shadow: var(--shadow);
-            position: relative;
         }
 
         .reader-controls {
@@ -434,39 +433,11 @@
             max-height: 380px;
             overflow-y: auto;
             padding-right: 8px;
-            position: relative;
-            white-space: pre-wrap;
-            word-wrap: break-word;
         }
 
         .text-content::selection {
             background: var(--accent-2);
             color: white;
-        }
-
-        /* Word highlighting for skimming */
-        .text-content span.word {
-            transition: opacity 0.5s ease, color 0.5s ease;
-            padding: 0 2px;
-            border-radius: 2px;
-        }
-
-        .text-content span.word.hidden-word {
-            opacity: 0.3;
-            color: transparent;
-            text-shadow: 0 0 8px rgba(0,0,0,0.2);
-        }
-
-        .text-content span.word.fading {
-            animation: fadeOut 0.8s ease forwards;
-        }
-
-        @keyframes fadeOut {
-            to {
-                opacity: 0.3;
-                color: transparent;
-                text-shadow: 0 0 8px rgba(0,0,0,0.2);
-            }
         }
 
         /* Flip Cards */
@@ -865,29 +836,6 @@
             background: var(--accent-1);
             color: white;
         }
-
-        /* Skimming progress bar */
-        .skimming-progress {
-            width: 100%;
-            height: 6px;
-            background: #e0e0e0;
-            border-radius: 3px;
-            margin-top: 10px;
-            overflow: hidden;
-        }
-
-        .skimming-progress-fill {
-            height: 100%;
-            background: var(--accent-2);
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        .reset-skimming-btn {
-            margin-top: 10px;
-            padding: 8px 16px;
-            font-size: 14px;
-        }
     </style>
 </head>
 <body data-theme="light">
@@ -906,7 +854,7 @@
                     </select>
                 </div>
                 <div class="voice-tip">
-                    Tip: if your browser provides a voice called "Juniper", it will be selected automatically for clear, exam-style pronunciation.
+                    Tip: if your browser provides a voice called “Juniper”, it will be selected automatically for clear, exam-style pronunciation.
                 </div>
             </div>
             <button class="btn btn-secondary" onclick="showProgress()">Progress</button>
@@ -983,29 +931,20 @@
                             class="btn btn-secondary"
                             onclick="toggleSkimming()"
                         >
-                            ⚡ Start Skimming Practice
+                            ⚡ Start skimming
                         </button>
                         <div class="skimming-control">
-                            <span class="skimming-label">Speed:</span>
-                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(-0.1)">−</button>
-                            <span class="skimming-value" id="skimmingSpeedDisplay">0.5x</span>
-                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(0.1)">+</button>
+                            <span class="skimming-label">Skimming speed:</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(-0.2)">−</button>
+                            <span class="skimming-value" id="skimmingSpeedDisplay">1.0x</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px;" onclick="changeSkimmingSpeed(0.2)">+</button>
                         </div>
-                        <button class="btn btn-secondary reset-skimming-btn" onclick="resetSkimming()" style="display: none;" id="resetSkimmingBtn">
-                            ↩ Reset Skimming
-                        </button>
                     </div>
                     <div class="reader-control-group">
                         <button class="btn btn-secondary" onclick="changeFontSize(1)">A+</button>
                         <button class="btn btn-secondary" onclick="changeFontSize(-1)">A-</button>
                     </div>
                 </div>
-                
-                <!-- Skimming progress bar -->
-                <div class="skimming-progress" id="skimmingProgressBar" style="display: none;">
-                    <div class="skimming-progress-fill" id="skimmingProgressFill"></div>
-                </div>
-                
                 <div class="text-content" id="textContent"></div>
             </div>
 
@@ -1158,16 +1097,13 @@
         let currentUtterance = null;
         let isReading = false;
 
-        // New Skimming state (words disappear one by one without moving text)
-        let skimmingSpeed = 0.5; // Much slower default speed
+        // Skimming state (words disappearing)
+        let skimmingSpeed = 1.0;
         let skimmingInterval = null;
         let isSkimming = false;
         let originalText = '';
         let originalWords = [];
-        let wordSpans = [];
         let currentSkimIndex = 0;
-        let totalWords = 0;
-        let hiddenWords = new Set();
 
         function loadVoices() {
             if (!('speechSynthesis' in window)) return;
@@ -1300,12 +1236,12 @@
             {
                 id: 1,
                 title: "The Best Recruiting Agents",
-                text: "In 1849 a servant girl wrote home to her brother from Port Adelaide, South Australia: \"I have accepted a situation at £20 per annum, so you can tell the servants in your neighbourhood not to stay in England for such wages as from £4 to £8 a year, but come here.\" Letters such as these, which were circulated from kitchen to kitchen and from attic to attic in English homes, were the best recruiting agents for the colonies, which were then so desperately in need of young women to serve the pioneers who were trying to create a new life for themselves in their chosen countries. Other girls read about the much better prospects overseas in newspapers and magazines, which also published advertisements giving details of free or assisted passages.",
+                text: "In 1849 a servant girl wrote home to her brother from Port Adelaide, South Australia: “I have accepted a situation at £20 per annum, so you can tell the servants in your neighbourhood not to stay in England for such wages as from £4 to £8 a year, but come here.” Letters such as these, which were circulated from kitchen to kitchen and from attic to attic in English homes, were the best recruiting agents for the colonies, which were then so desperately in need of young women to serve the pioneers who were trying to create a new life for themselves in their chosen countries. Other girls read about the much better prospects overseas in newspapers and magazines, which also published advertisements giving details of free or assisted passages.",
                 words: [
                     { 
                         word: "situation", 
                         definition: "job (in the passage, as a servant)", 
-                        translation: "ish o'rni (matnda xizmatkorlik ishi ma'nosida)",
+                        translation: "ish o‘rni (matnda xizmatkorlik ishi ma’nosida)",
                         sentence: "She finally found a situation with kinder employers and better conditions."
                     },
                     { 
@@ -1323,7 +1259,7 @@
                     { 
                         word: "circulate", 
                         definition: "to move from place to place or person to person; to pass around", 
-                        translation: "aylanmoq, qo'ldan qo'lga o'tmoq",
+                        translation: "aylanmoq, qo‘ldan qo‘lga o‘tmoq",
                         sentence: "Rumours about the new law began to circulate in the small town."
                     },
                     { 
@@ -1347,7 +1283,7 @@
                     { 
                         word: "pioneer", 
                         definition: "one of the first people to move to a new country to work or settle", 
-                        translation: "birinchi ko'chib borgan odam, poydevor qo'yuvchi",
+                        translation: "birinchi ko‘chib borgan odam, poydevor qo‘yuvchi",
                         sentence: "As a pioneer in this field, she developed techniques that others later copied."
                     },
                     { 
@@ -1371,7 +1307,7 @@
                     { 
                         word: "assisted", 
                         definition: "helped financially, especially for travel costs", 
-                        translation: "moliyaviy yordam ko'rsatilgan",
+                        translation: "moliyaviy yordam ko‘rsatilgan",
                         sentence: "Many migrants travelled on assisted passages paid partly by the government."
                     },
                     { 
@@ -1410,7 +1346,7 @@
                         word: "device", 
                         definition: "method for doing something or achieving a result", 
                         translation: "usul, metod",
-                        sentence: "Free association is a useful device for exploring a patient's hidden thoughts."
+                        sentence: "Free association is a useful device for exploring a patient’s hidden thoughts."
                     },
                     { 
                         word: "wander", 
@@ -1445,7 +1381,7 @@
                     { 
                         word: "terror", 
                         definition: "something that causes great fear", 
-                        translation: "dahshat, qo'rquv",
+                        translation: "dahshat, qo‘rquv",
                         sentence: "As a child he experienced great terror during thunderstorms."
                     },
                     { 
@@ -1456,8 +1392,8 @@
                     }
                 ],
                 grammar: {
-                    title: "Using "Would" to Talk About Past Habits",
-                    explanation: "We use "would" to describe repeated actions in the past, especially in stories, when the time period is already clear.",
+                    title: "Using “Would” to Talk About Past Habits",
+                    explanation: "We use “would” to describe repeated actions in the past, especially in stories, when the time period is already clear.",
                     example: "During therapy, he would talk for hours about his childhood memories.",
                     questionText: "When he was a child, he ___ for hours about his strange dreams.",
                     options: [
@@ -1477,7 +1413,7 @@
                     { 
                         word: "plus", 
                         definition: "more than", 
-                        translation: "…dan ko'p",
+                        translation: "…dan ko‘p",
                         sentence: "The tree can live for fifty years plus, if it is well looked after."
                     },
                     { 
@@ -1495,13 +1431,13 @@
                     { 
                         word: "obtain", 
                         definition: "to get", 
-                        translation: "ega bo'lmoq",
+                        translation: "ega bo‘lmoq",
                         sentence: "Workers must climb the palm to obtain the fresh juice every morning."
                     },
                     { 
                         word: "majority", 
                         definition: "more than half", 
-                        translation: "asosiy, ko'pchilik",
+                        translation: "asosiy, ko‘pchilik",
                         sentence: "The majority of villagers depend on the palm industry for income."
                     },
                     { 
@@ -1519,13 +1455,13 @@
                     { 
                         word: "nutritious", 
                         definition: "having high food value", 
-                        translation: "o'zuqaviy, to'yimli",
+                        translation: "o‘zuqaviy, to‘yimli",
                         sentence: "The juice is highly nutritious and is often given to children."
                     },
                     { 
                         word: "convert", 
                         definition: "to change in form", 
-                        translation: "o'zgartirmoq",
+                        translation: "o‘zgartirmoq",
                         sentence: "Local factories convert the liquid into sugar and sweets."
                     },
                     { 
@@ -1537,7 +1473,7 @@
                     { 
                         word: "top", 
                         definition: "to be higher than", 
-                        translation: "…dan balandroq bo'lmoq",
+                        translation: "…dan balandroq bo‘lmoq",
                         sentence: "Some palms top thirty metres and sway in the strong wind."
                     }
                 ],
@@ -1623,7 +1559,7 @@
                     { 
                         word: "mediocre", 
                         definition: "not very good", 
-                        translation: "o'rtacha",
+                        translation: "o‘rtacha",
                         sentence: "The film was mediocre, but the audience laughed as if it were brilliant."
                     },
                     { 
@@ -1647,7 +1583,7 @@
                     { 
                         word: "be prone", 
                         definition: "likely to do something", 
-                        translation: "moyil bo'lmoq",
+                        translation: "moyil bo‘lmoq",
                         sentence: "People who are tired are more prone to overreact to small things."
                     },
                     { 
@@ -1665,7 +1601,7 @@
                 ],
                 grammar: {
                     title: "Adverbs of Frequency and Degree",
-                    explanation: "We use adverbs like "frequently", "often", "rarely" and "slightly", "deeply", "extremely" to show how often or how strongly something happens.",
+                    explanation: "We use adverbs like “frequently”, “often”, “rarely” and “slightly”, “deeply”, “extremely” to show how often or how strongly something happens.",
                     example: "People with a keen sense of humour rarely laugh excessively.",
                     questionText: "People who feel insecure are ___ likely to go to extremes to hide it.",
                     options: [
@@ -1691,25 +1627,25 @@
                     { 
                         word: "peak", 
                         definition: "top of a mountain", 
-                        translation: "cho'qqi",
+                        translation: "cho‘qqi",
                         sentence: "Fresh snow covered each peak after the storm."
                     },
                     { 
                         word: "barrier", 
                         definition: "something that blocks movement", 
-                        translation: "to'siq",
+                        translation: "to‘siq",
                         sentence: "Thick lines of trees form a natural barrier against avalanches."
                     },
                     { 
                         word: "avalanche", 
                         definition: "mass of snow sliding down a mountain", 
-                        translation: "qor ko'chkisi",
+                        translation: "qor ko‘chkisi",
                         sentence: "The village was nearly destroyed by a sudden avalanche."
                     },
                     { 
                         word: "landslide", 
                         definition: "movement of rocks and soil downward", 
-                        translation: "yer ko'chkisi",
+                        translation: "yer ko‘chkisi",
                         sentence: "Heavy rain triggered a landslide that blocked the road."
                     },
                     { 
@@ -1780,8 +1716,8 @@
                     }
                 ],
                 grammar: {
-                    title: "Cause and Effect with "as a result" and "due to"",
-                    explanation: "We use phrases like "as a result" and "due to" to clearly show cause and effect in academic-style writing.",
+                    title: "Cause and Effect with “as a result” and “due to”",
+                    explanation: "We use phrases like “as a result” and “due to” to clearly show cause and effect in academic-style writing.",
                     example: "Trees have been felled for ski runs; as a result, avalanches have become more common.",
                     questionText: "Many meadows have been abandoned; ___, traditional farming has almost disappeared.",
                     options: [
@@ -1935,26 +1871,6 @@
             return progress ? parseInt(progress) : 0;
         }
 
-        // NEW: Prepare text for skimming (wrap each word in a span)
-        function prepareTextForSkimming(text) {
-            // Split text into words and keep punctuation
-            const wordsWithPunctuation = text.match(/[\w'’]+|[^\w\s]|\s+/g) || [];
-            let html = '';
-            wordSpans = [];
-            
-            wordsWithPunctuation.forEach((word, index) => {
-                // Only wrap actual words (not punctuation or spaces)
-                if (word.match(/[\w'’]+/)) {
-                    html += `<span class="word" data-index="${index}">${word}</span>`;
-                    wordSpans.push({ element: null, index, word });
-                } else {
-                    html += word;
-                }
-            });
-            
-            return html;
-        }
-
         // Open unit
         function openUnit(unitId) {
             currentUnit = unitsData.find(u => u.id === unitId);
@@ -1969,23 +1885,10 @@
             const textEl = document.getElementById('textContent');
 
             originalText = currentUnit.text;
-            
-            // Prepare text with word spans for skimming
-            const html = prepareTextForSkimming(originalText);
-            textEl.innerHTML = html;
-            
-            // Store references to word span elements
-            const wordElements = textEl.querySelectorAll('.word');
-            wordElements.forEach((el, i) => {
-                if (wordSpans[i]) {
-                    wordSpans[i].element = el;
-                }
-            });
-            
-            totalWords = wordSpans.length;
-            hiddenWords.clear();
+            originalWords = originalText.split(/\s+/);
             currentSkimIndex = 0;
-            
+
+            textEl.textContent = originalText;
             textEl.scrollTop = 0;
             
             // Initialize cards
@@ -1994,8 +1897,6 @@
             showCard();
             
             document.getElementById('cardsCompleteButtons').classList.add('hidden');
-            document.getElementById('resetSkimmingBtn').style.display = 'none';
-            document.getElementById('skimmingProgressBar').style.display = 'none';
 
             // Grammar section
             renderGrammarSection();
@@ -2099,7 +2000,7 @@
             }
         }
 
-        // NEW SKIMMING: Words disappear one by one without moving text
+        // Skimming controls (words disappearing)
         function toggleSkimming() {
             if (isSkimming) {
                 stopSkimming();
@@ -2110,7 +2011,7 @@
 
         function changeSkimmingSpeed(delta) {
             skimmingSpeed += delta;
-            skimmingSpeed = Math.max(0.1, Math.min(2.0, skimmingSpeed)); // Much slower range
+            skimmingSpeed = Math.max(0.2, Math.min(12, skimmingSpeed));
             const display = document.getElementById('skimmingSpeedDisplay');
             if (display) {
                 display.textContent = skimmingSpeed.toFixed(1) + 'x';
@@ -2118,110 +2019,32 @@
         }
 
         function startSkimming() {
-            if (!currentUnit || !wordSpans.length) return;
+            const textEl = document.getElementById('textContent');
+            if (!textEl || !originalWords.length) return;
 
-            stopSkimming(); // Reset previous session
+            stopSkimming(); // reset previous session
 
             isSkimming = true;
-            updateSkimmingButton();
-            
-            // Show progress bar
-            document.getElementById('skimmingProgressBar').style.display = 'block';
-            document.getElementById('resetSkimmingBtn').style.display = 'inline-block';
-            
-            // Reset all words to visible
-            wordSpans.forEach(span => {
-                if (span.element) {
-                    span.element.classList.remove('hidden-word', 'fading');
-                }
-            });
-            
-            hiddenWords.clear();
             currentSkimIndex = 0;
-            
-            // Calculate interval time based on speed (slower = longer interval)
-            // At speed 0.5x: 2000ms per word (2 seconds)
-            // At speed 2.0x: 500ms per word (0.5 seconds)
-            const baseInterval = 2000; // Base interval for 0.5x speed
-            const intervalTime = baseInterval / skimmingSpeed;
-            
-            // Update progress bar
-            updateSkimmingProgress();
-            
+            textEl.textContent = originalText;
+            updateSkimmingButton();
+
+            const baseWordsPerTick = 1.5; // base removal rate
+            const intervalMs = 80;
+
             skimmingInterval = setInterval(() => {
-                if (currentSkimIndex >= totalWords) {
-                    // All words have been processed
+                const step = Math.max(1, Math.round(baseWordsPerTick * skimmingSpeed));
+                currentSkimIndex += step;
+
+                if (currentSkimIndex >= originalWords.length) {
+                    textEl.textContent = '';
                     stopSkimming();
-                    
-                    // Show completion message
-                    const textEl = document.getElementById('textContent');
-                    const completionMsg = document.createElement('div');
-                    completionMsg.style.textAlign = 'center';
-                    completionMsg.style.marginTop = '20px';
-                    completionMsg.style.padding = '15px';
-                    completionMsg.style.background = 'var(--success)';
-                    completionMsg.style.color = 'white';
-                    completionMsg.style.borderRadius = '8px';
-                    completionMsg.innerHTML = '<strong>✅ Skimming Complete!</strong><br>All words have faded. Try to recall the text.';
-                    
-                    setTimeout(() => {
-                        textEl.appendChild(completionMsg);
-                    }, 500);
-                    
                     return;
                 }
-                
-                // Get current word
-                const currentWord = wordSpans[currentSkimIndex];
-                if (currentWord && currentWord.element) {
-                    // Add fading animation class
-                    currentWord.element.classList.add('fading');
-                    
-                    // After animation, mark as hidden
-                    setTimeout(() => {
-                        currentWord.element.classList.add('hidden-word');
-                        currentWord.element.classList.remove('fading');
-                        hiddenWords.add(currentSkimIndex);
-                        
-                        // Update progress
-                        updateSkimmingProgress();
-                    }, 800); // Match animation duration
-                }
-                
-                currentSkimIndex++;
-            }, intervalTime);
-        }
 
-        function updateSkimmingProgress() {
-            const progress = (currentSkimIndex / totalWords) * 100;
-            document.getElementById('skimmingProgressFill').style.width = progress + '%';
-        }
-
-        function resetSkimming() {
-            stopSkimming();
-            
-            // Reset all words to visible
-            wordSpans.forEach(span => {
-                if (span.element) {
-                    span.element.classList.remove('hidden-word', 'fading');
-                }
-            });
-            
-            hiddenWords.clear();
-            currentSkimIndex = 0;
-            
-            // Hide progress bar
-            document.getElementById('skimmingProgressBar').style.display = 'none';
-            document.getElementById('resetSkimmingBtn').style.display = 'none';
-            
-            // Remove completion message if exists
-            const textEl = document.getElementById('textContent');
-            const completionMsg = textEl.querySelector('div');
-            if (completionMsg && completionMsg.innerHTML.includes('Skimming Complete')) {
-                completionMsg.remove();
-            }
-            
-            updateSkimmingButton();
+                const remaining = originalWords.slice(currentSkimIndex).join(' ');
+                textEl.textContent = remaining;
+            }, intervalMs);
         }
 
         function stopSkimming() {
@@ -2237,11 +2060,11 @@
             const btn = document.getElementById('skimmingToggleBtn');
             if (!btn) return;
             if (isSkimming) {
-                btn.textContent = '⏹ Stop Skimming';
+                btn.textContent = '⏹ Stop skimming';
                 btn.classList.remove('btn-secondary');
                 btn.classList.add('btn-primary');
             } else {
-                btn.textContent = '⚡ Start Skimming Practice';
+                btn.textContent = '⚡ Start skimming';
                 btn.classList.remove('btn-primary');
                 btn.classList.add('btn-secondary');
             }
