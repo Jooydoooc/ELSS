@@ -1753,14 +1753,41 @@ speeds mean faster disappearance).  Users can adjust the speed in 0.2 increments
             }
         ];
 
-        // Add placeholder units 6–75 (Coming soon)
-        for (let i = 6; i <= 75; i++) {
-            unitsData.push({
-                id: i,
-                title: `Unit ${i} – Coming Soon`,
-                comingSoon: true
-            });
-        }
+        // --- UNIT 6 FULL DATA (NOW ACTIVE, NOT COMING SOON) ---
+unitsData.push({
+    id: 6,
+    title: "The Assembly Line",
+    text: "Henry Ford was a car builder. He was not the first to have the idea of the horseless coach. The Germans Daimler and Benz had invented it, but he was the first to use the assembly line for mass production. His Model-T car was the first to be produced on the assembly line. The new system cut the time in which the car was put together from 14 hours to 1 hour and 33 minutes. Eventually the price of the car fell from $1,200 to $295. The car lacked certain luxuries; still, it could be relied on and did not need much looking after. Soon, the Model-T became the people's car. After nineteen years, when the Model-T became obsolete and sales dropped sharply – for other car manufacturers, copying Ford's assembly line system, were able to bring down the costs of much more attractive cars – Ford developed the new Model-A. It, too, was the most inexpensive car on the market.",
+    
+    words: [
+        { word: "assembly line", definition: "a system where products move from worker to worker", translation: "konveyer liniyasi", sentence: "The assembly line made production much faster." },
+        { word: "mass production", definition: "making large quantities of products quickly", translation: "ommaviy ishlab chiqarish", sentence: "Mass production reduced the cost of cars." },
+        { word: "put together", definition: "to build or assemble", translation: "yig‘moq", sentence: "The workers put together each part of the car." },
+        { word: "eventually", definition: "in the end, finally", translation: "oxir-oqibat", sentence: "The price eventually dropped to $295." },
+        { word: "luxury", definition: "something expensive and not necessary", translation: "has-hasham", sentence: "The Model-T had no luxury features." },
+        { word: "rely on", definition: "to depend on", translation: "ishonmoq", sentence: "People relied on the Model-T because it was strong." },
+        { word: "obsolete", definition: "no longer used; old-fashioned", translation: "eskirgan", sentence: "The Model-T became obsolete after nineteen years." },
+        { word: "drop sharply", definition: "to decrease suddenly", translation: "keskin kamaymoq", sentence: "Sales dropped sharply when new cars appeared." }
+    ],
+
+    grammar: {
+        title: "Used to vs. Would for Past Habits",
+        explanation: "We use 'used to' for past states or habits. We use 'would' for repeated past actions, especially in storytelling.",
+        example: "Ford would test many ideas before choosing the best one.",
+        questionText: "In the early years, Ford ___ experiment with different production methods.",
+        options: ["would", "used to", "is used to", "will"],
+        correctIndex: 0
+    }
+});
+
+// --- PLACEHOLDER UNITS 7–75 ---
+for (let i = 7; i <= 75; i++) {
+    unitsData.push({
+        id: i,
+        title: `Unit ${i} – Coming Soon`,
+        comingSoon: true
+    });
+}
 
         // Initialize
         window.onload = function() {
